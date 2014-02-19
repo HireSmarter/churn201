@@ -1,5 +1,13 @@
-# History files
+# R History, projects, data
 .Rhistory
+.RData
 
 # Example code in package build process
 *-Ex.R
+
+# RStudio stuff - not important to share
+.Rproj.user/*
+churn201.Rproj
+
+# Mac metadata
+.DS_Store
