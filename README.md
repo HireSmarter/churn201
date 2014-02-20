@@ -12,7 +12,7 @@ We remark that this model acts as a "quantitative scissors" that limit our optio
 We make a somewhat bold claim that there are only 6 actions available to reduce attrition damage - to support this claim,
 we are publishing the code here for the model.  You can experiment, plot, present, and interact with the data and with us.
 
-![Figure 1][]
+![Figure1][]
 
 While this current graph could be done in excel, spreadsheets run out of analytics fuel quickly, and are not nearly as transparent as the attached code.
 Spreadsheets are just the wrong tool for the job, especially given what is coming up in future installments.
@@ -83,9 +83,9 @@ We do encourage experimentation, and you are welcome to present useful ["pull re
 
 Also, you can see here two plots that did not make it in to the paper:
 
-![Figure 2][]
+![Figure2][]
 
-![Figure 3][]
+![Figure3][]
 
 
 
@@ -96,6 +96,6 @@ Also, you can see here two plots that did not make it in to the paper:
 [mktchurn]:	http://stochasticsolutions.com/pdf/SavedAndDrivenAway.pdf
 [pullreq]:	https://github.com/talentanalytics/churn201/pulls
 [issues]:	https://github.com/talentanalytics/churn201/issues 
-[Figure 1]:	figure_1.png
-[Figure 2]:	figure_2.png
-[Figure 3]:	figure_3.png
+[Figure1]:	figure_1.png "Monthly Cost & Benefit from One Employee"
+[Figure2]:	figure_2.png "Net Monthly Benefit from One Employee"
+[Figure3]:	figure_3.png "Cumulative Benefit from One Employee"
