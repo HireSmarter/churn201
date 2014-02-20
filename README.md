@@ -28,6 +28,7 @@ These are the six leverage points, that we claim are the only ways to escape the
 	- `max.benefit` sets the year at which the employee reaches full productivity.  This slides the top of the "S" sooner or later.
 3. Decrease salary/productivity ratio
 	- `salary` sets the salary, in terms of 100% productivity
+	- Feel free to add inflation or other factors - but remember that salary is listed **as a percentage of productivity**.  If there is inflation, then productivity's value would go up too.
 4. Increase overall productivity (which is at odds with all above points)
 	- Currently, nothing changes overall productivity - but you could change line 18 to do so, or plot a second curve to show a comparison
 5. Decrease employee turnover prior to the full productivity phase
@@ -47,8 +48,7 @@ If you are a math geek, you can change the cost or benefit functions as well:
 	- I was experimenting with a more skewed sigmoid, showing slower gains at first.  But, the time period is so short, that it really doesn't make much difference for the complexity.
 - The cost curve is a [Gompertz function][gompertz], `a * exp(b * exp(c * t))`
 
-You are welcome to embellish these with inflation, performance raises, varying productivity, noise.
-
+You are welcome to embellish these to match your scenarios or fantastic imaginations.
 I'm curious what you will cook up!
 
 ### Future Topics
