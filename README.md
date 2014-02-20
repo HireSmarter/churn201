@@ -28,7 +28,7 @@ These are the six leverage points, that we claim are the only ways to escape the
 	- `max.benefit` sets the year at which the employee reaches full productivity.  This slides the top of the "S" sooner or later.
 3. Decrease salary/productivity ratio
 	- `salary` sets the salary, in terms of 100% productivity
-	- Feel free to add inflation or other factors - but remember that salary is listed **as a percentage of productivity**.  If there is inflation, then productivity's value would go up too.
+	- Feel free to add inflation or other factors - but remember that salary is listed **as a percentage of productivity**.  If there is inflation, then productivity's value would go up too, and costs as well.
 4. Increase overall productivity (which is at odds with all above points)
 	- Currently, nothing changes overall productivity - but you could change line 18 to do so, or plot a second curve to show a comparison
 5. Decrease employee turnover prior to the full productivity phase
