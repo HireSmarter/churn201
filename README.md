@@ -89,13 +89,13 @@ Also, you can see here two plots that did not make it in to the paper:
 
 
 
-[patimes]:	http://www.predictiveanalyticsworld.com/patimes/
-[ta]:		http://www.talentanalytics.com
-[sigmoid]:	http://en.wikipedia.org/wiki/Sigmoid_function
-[gompertz]:	http://en.wikipedia.org/wiki/Gompertz_curve
-[mktchurn]:	http://stochasticsolutions.com/pdf/SavedAndDrivenAway.pdf
-[pullreq]:	https://github.com/talentanalytics/churn201/pulls
-[issues]:	https://github.com/talentanalytics/churn201/issues 
-[Figure1]:	figure_1.png "Monthly Cost & Benefit from One Employee"
-[Figure2]:	figure_2.png "Net Monthly Benefit from One Employee"
-[Figure3]:	figure_3.png "Cumulative Benefit from One Employee"
+[patimes]: http://www.predictiveanalyticsworld.com/patimes/
+[ta]: http://www.talentanalytics.com
+[sigmoid]: http://en.wikipedia.org/wiki/Sigmoid_function
+[gompertz]: http://en.wikipedia.org/wiki/Gompertz_curve
+[mktchurn]: http://stochasticsolutions.com/pdf/SavedAndDrivenAway.pdf
+[pullreq]: https://github.com/talentanalytics/churn201/pulls
+[issues]: https://github.com/talentanalytics/churn201/issues 
+[Figure1]: figure_1.png "Monthly Cost & Benefit from One Employee"
+[Figure2]: figure_2.png "Net Monthly Benefit from One Employee"
+[Figure3]: figure_3.png "Cumulative Benefit from One Employee"
