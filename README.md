@@ -68,7 +68,7 @@ Running the code is easy, if you are familiar with R:
 
 - Open R, R Studio, or whatever R platform you use.
 - Set the working directory to your downloaded/cloned directory
-- `source blog001.R` to run the numbers, based on the hardcoded values.
+- `source(blog001.R)` to run the numbers, based on the hardcoded values.
 - Display the graph by printing `fig1`
 - To change assumptions, edit the program and repeat.
 
