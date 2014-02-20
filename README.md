@@ -6,7 +6,7 @@ Our goal here is to foster conversation and learning, including learning by us.
 
 ## The Quantitative Scissors
 In the first blog entry, we put out a stylized model of employee value, plotting out monthly employee costs and benefits.
-We define the way that these costs operate, to show why high attrition cause is costly to an employer.
+We define the way that these costs operate, to show why high attrition is costly to an employer.
 We remark that this model acts as a "quantitative scissors" that limit our options to reduce the damage done by attrition.
 
 We make a somewhat bold claim that there are only 6 actions available to reduce attrition damage - to support this claim,
