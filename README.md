@@ -89,7 +89,7 @@ Also, you can see here two plots that did not make it in to the paper:
 
 
 
-[patimes]: http://www.predictiveanalyticsworld.com/patimes/
+[patimes]: http://www.predictiveanalyticsworld.com/patimes/employee-churn-201-calculating-employee-value/
 [ta]: http://www.talentanalytics.com
 [sigmoid]: http://en.wikipedia.org/wiki/Sigmoid_function
 [gompertz]: http://en.wikipedia.org/wiki/Gompertz_curve
