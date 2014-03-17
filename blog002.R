@@ -31,6 +31,7 @@ be.cume <- emp.value$tenure.yrs[be.cume.id]
 
 writeLines(sprintf("At this rate net benefit begins at year %.2f, breakeven at year %.2f",
 				   be.pt, be.cume))
+# At this rate net benefit begins at year 0.77, breakeven at year 1.90
 
 # plot time vs. monthly cost, benefit
 fig1 <- ggplot(data=emp.value,
@@ -39,14 +40,11 @@ fig1 <- ggplot(data=emp.value,
 	scale_alpha_discrete(range=c(0,.1)) + 
 	theme(legend.position="none") +
 
-	geom_line(col="red", aes(y=cost)) + 
-	geom_line(col="green", aes(y=benefit)) +
+	geom_line(col="red", size=1, aes(y=cost)) + 
+	geom_line(col="green", size=1, aes(y=benefit)) +
 	theme(legend.position="bottom") +
 
-	annotate("point", 
-			 x=emp.value$tenure.yrs[be.pt.id], 
-			 y=emp.value$cost[be.pt.id], 
-			 color="Blue") +
+	geom_vline(xintercept=be.pt,col="Blue", size=0.5, linetype="dashed") +
 	annotate("text", 
 			 x=emp.value$tenure.yrs[be.pt.id]+0.02, 
 			 y=emp.value$cost[be.pt.id], 
@@ -54,12 +52,9 @@ fig1 <- ggplot(data=emp.value,
 			 size=4,
 			 label="Monthly Breakeven",
 			 hjust=0, vjust=0) +
-	annotate("point", 
-			 x=emp.value$tenure.yrs[be.cume.id], 
-			 y=emp.value$cost[be.cume.id], 
-			 color="DarkGreen") +
+	geom_vline(xintercept=be.cume,col="DarkGreen", size=0.5, linetype="dashed") +
 	annotate("text", 
-			 x=emp.value$tenure.yrs[be.cume.id], 
+			 x=emp.value$tenure.yrs[be.cume.id] + 0.02, 
 			 y=emp.value$cost[be.cume.id] - 0.02, 
 			 size=4,
 			 color="DarkGreen",
@@ -72,9 +67,9 @@ fig1 <- ggplot(data=emp.value,
 		 x="Tenure in Years", 
 		 y="% Potential Monthly Value") 
 
-# png("figure_1.png")
-# print(fig1)
-# dev.off()
+png("paw_1.png", height=72*6, width=72*9)
+print(fig1)
+dev.off()
 
 gen.timeline <- function() {
 	yrs <- 4.2
@@ -104,31 +99,58 @@ writeLines(sprintf("%.1f%% employees below monthly breakeven, %.1f%% below cume 
 				  	sum(d.timeline$tenure.yrs<be.pt)/nrow(d.timeline)*100, 
 					sum(d.timeline$tenure.yrs<be.cume)/nrow(d.timeline)*100))
 
+# 26.7% employees below monthly breakeven, 70.0% below cume breakeven
+
 fig2 <- ggplot(d.timeline,
 		   aes(x=hire, xmin=hire, xmax=term, y=id, col=term.class)) + 
-		geom_errorbarh(height=5) + 
+		geom_errorbarh(height=3, size=0.65) + 
 		scale_color_hue(name="term.class") +
-		geom_vline(xintercept=2014.2,col="red", size=1) +
+		geom_vline(xintercept=2014.2,col="red", size=0.65, linetype="dashed") +
+		annotate("text", 
+				 x= 2014.2 + 0.02, 
+				 y= 0, 
+				 size=4,
+				 color="Red",
+				 label="Today",
+				 hjust=0, vjust=1) +
 		scale_x_continuous(limits=c(2010,2016)) +
 		labs(x="Hire Date", y="Employees") +
 		theme_bw() + 
 		theme(legend.position="bottom",
 			  axis.ticks.y=element_blank(),
 			  axis.text.y=element_blank())
-# print(fig2)
+png("paw_2.png", height=72*6, width=72*9)
+print(fig2)
+dev.off()
 
 
 fig3 <- ggplot(d.timeline,
 		   aes(x=tenure.yrs, xmin=0, xmax=tenure.yrs,
 			   y=id, col=term.class)) + 
-		geom_errorbarh(height=5) + 
+		geom_errorbarh(height=5, size=0.65) + 
 		scale_color_hue(name="term.class") +
-		geom_vline(xintercept=be.pt,col="Blue", size=1) +
-		geom_vline(xintercept=be.cume,col="DarkGreen", size=1) +
+		geom_vline(xintercept=be.pt,col="Blue", size=0.65, linetype="dashed") +
+		annotate("text", 
+				 x= be.pt + 0.02, 
+				 y= 0, 
+				 size=4,
+				 color="Blue",
+				 label="Monthly B/E",
+				 hjust=0, vjust=1) +
+		geom_vline(xintercept=be.cume,col="DarkGreen", size=0.65, linetype="dashed") +
+		annotate("text", 
+				 x= be.cume + 0.02, 
+				 y= 0, 
+				 size=4,
+				 color="DarkGreen",
+				 label="Cumulative B/E",
+				 hjust=0, vjust=1) +
 		scale_x_continuous() +
 		labs(x="Hire Date", y="Employees") +
 		theme_bw() + 
 		theme(legend.position="bottom",
 			  axis.ticks.y=element_blank(),
 			  axis.text.y=element_blank())
-print(fig1)
+png("paw_3.png", height=72*6, width=72*9)
+print(fig3)
+dev.off()
