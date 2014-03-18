@@ -44,10 +44,24 @@ fig1 <- ggplot(data=emp.value,
 	geom_line(col="green", size=1, aes(y=benefit)) +
 	theme(legend.position="bottom") +
 
+	annotate("text", 
+			 x=2, 
+			 y=1.02,
+			 color="green",
+			 size=4,
+			 label="Benefit",
+			 hjust=0, vjust=0) +
+	annotate("text", 
+			 x=2, 
+			 y=0.52,
+			 color="red",
+			 size=4,
+			 label="Cost",
+			 hjust=0, vjust=0) +
 	geom_vline(xintercept=be.pt,col="Blue", size=0.5, linetype="dashed") +
 	annotate("text", 
 			 x=emp.value$tenure.yrs[be.pt.id]+0.02, 
-			 y=emp.value$cost[be.pt.id], 
+			 y=0,	#emp.value$cost[be.pt.id], 
 			 color="Blue",
 			 size=4,
 			 label="Monthly Breakeven",
@@ -55,11 +69,11 @@ fig1 <- ggplot(data=emp.value,
 	geom_vline(xintercept=be.cume,col="DarkGreen", size=0.5, linetype="dashed") +
 	annotate("text", 
 			 x=emp.value$tenure.yrs[be.cume.id] + 0.02, 
-			 y=emp.value$cost[be.cume.id] - 0.02, 
+			 y=0,	#emp.value$cost[be.cume.id] - 0.02, 
 			 size=4,
 			 color="DarkGreen",
-			 label="Cumulative\nBreakeven",
-			 hjust=0, vjust=1) +
+			 label="Cumulative Breakeven",
+			 hjust=0, vjust=0) +
 	scale_y_continuous(labels = percent) +
 	theme_bw() +
 	theme(legend.position="none") +
@@ -146,7 +160,7 @@ fig3 <- ggplot(d.timeline,
 				 label="Cumulative B/E",
 				 hjust=0, vjust=1) +
 		scale_x_continuous() +
-		labs(x="Hire Date", y="Employees") +
+		labs(x="Years Tenure", y="Employees") +
 		theme_bw() + 
 		theme(legend.position="bottom",
 			  axis.ticks.y=element_blank(),
