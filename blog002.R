@@ -154,3 +154,18 @@ fig3 <- ggplot(d.timeline,
 png("paw_3.png", height=72*6, width=72*9)
 print(fig3)
 dev.off()
+
+
+twoBars <- function(var.a, val.a, var.b, val.b) {
+	d.g <- data.frame(rbind(c(var.a, val.a), c(var.b, val.b)))
+	names(d.g) <- c("variable", "value")
+	d.g$variable <- factor(d.g$variable, levels=c(var.a, var.b))
+	d.g$value <- as.numeric(levels(d.g$value)[as.numeric(d.g$value)])
+
+	ggplot(d.g, aes(x=variable, y=value, fill=variable, col=variable)) +
+	geom_bar(stat="identity") +
+	scale_y_continuous(labels = percent) +
+	labs(x="Analysis Results", y="Percent") +
+	theme_bw() +
+	theme(legend.position="none") 
+}
