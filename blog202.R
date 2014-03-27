@@ -3,56 +3,53 @@ library(gridExtra)
 library(scales)
 library(manipulate)
 
-runSim202 <- function(max.yrs=3, max.benefit=1.5, cost.ramp=1.7, cost.scale=1.5, salary=0.5,
-					  center.bad=0.9, center.good=2, good.bad.ratio=0.3, 
-					  run.size=10000, run.seed=42, sd.log=0.75) {
+manipSim202 <- function() {
+	manipulate(runSim202(max.yrs, max.benefit, 
+						 cost.ramp, cost.scale, salary,
+						 shape.good, scale.good, shape.bad, scale.bad, 
+						 good.bad.ratio),
+			   good.bad.ratio = slider(0, 1, initial=0.3),
+			   shape.good = slider(1, 3, initial=1.8), 
+			   scale.good = slider(0.01, 3, initial=1.5), 
+			   shape.bad = slider(1, 3, initial=1.25), 
+			   scale.bad = slider(0.01, 3, initial=0.9), 
+			   max.benefit = slider(0.25, 10, initial = 1),
+			   cost.ramp = slider(0.5, 10, initial=1.7), 
+			   cost.scale = slider(0.5, 10, initial=1.5), 
+			   salary = slider(0, 1, initial=0.5),
+			   max.yrs = slider(1, 8, initial=3))
+}
 
-	set.seed(run.seed)
-	writeLines(sprintf("Simulating %i samples with seed %i", run.size, run.seed))
-
-	# get random dist of good and bad employees
-	# lognormal is a nice estimate as it does not go below zero, and tails out long
-	
-	dist.good <- as.data.frame( rlnorm(run.size * good.bad.ratio, meanlog=log(center.good), sdlog=sd.log) )
-	names(dist.good) <- "tenure"
-	dist.good$benefit <- empBenefit(dist.good$tenure, max.benefit)
-	dist.good$benefit.cume <- empBenefitCume(dist.good$tenure, max.benefit)
-	dist.good$cost <- empCost(dist.good$tenure, cost.ramp, cost.scale, salary)
-	dist.good$cost.cume <- empCostCume(dist.good$tenure, cost.ramp, cost.scale, salary)
-	dist.good$ev <- dlnorm(dist.good$tenure, meanlog=log(center.good), sdlog=sd.log) * run.size * good.bad.ratio / 12
-
-	dist.bad <- as.data.frame( rlnorm(run.size * (1-good.bad.ratio), meanlog=log(center.bad), sdlog=sd.log) )
-	names(dist.bad) <- "tenure"
-	dist.bad$benefit <- empBenefit(dist.bad$tenure, max.benefit)
-	dist.bad$benefit.cume <- empBenefitCume(dist.bad$tenure, max.benefit)
-	dist.bad$cost <- empCost(dist.bad$tenure, cost.ramp, cost.scale, salary)
-	dist.bad$cost.cume <- empCostCume(dist.bad$tenure, cost.ramp, cost.scale, salary)
-	dist.bad$ev <- dlnorm(dist.bad$tenure, meanlog=log(center.bad), sdlog=sd.log) * run.size * (1-good.bad.ratio) / 12
-
-	writeLines(sprintf("  sim has %i good employees and %i bad employees", nrow(dist.good), nrow(dist.bad)))
+runSim202 <- function(max.yrs=3, max.benefit=1.5, 
+					  cost.ramp=1.7, cost.scale=1.5, salary=0.5,
+					  shape.good=1.8, scale.good=1.5, shape.bad=1.25, scale.bad=0.9, 
+					  good.bad.ratio=0.3) {
 
 	# divide our years uniformly, 100 pts a year
 	dist.year <- as.data.frame( 0:(max.yrs*100)/100 )
 	names(dist.year) <- "tenure"
 	dist.year$benefit <- empBenefit(dist.year$tenure, max.benefit)
+	dist.year$benefit.cume <- empBenefitCume(dist.year$tenure, max.benefit)
 	dist.year$cost <- empCost(dist.year$tenure, cost.ramp, cost.scale, salary)
+	dist.year$cost.cume <- empCostCume(dist.year$tenure, cost.ramp, cost.scale, salary)
+	dist.year$prob.good <- dweibull(dist.year$tenure, shape=shape.good, scale=scale.good)
+	dist.year$prob.bad <- dweibull(dist.year$tenure, shape=shape.bad, scale=scale.bad)
 
 	# calc breakeven points
-	be.pt.id <- which.max((dist.year$benefit - dist.year$cost)>0)
+	be.pt.id <- which.max(dist.year$benefit - dist.year$cost>0)
 	be.pt <- dist.year$tenure[be.pt.id]
-	be.cume.id <- which.max(cumsum(dist.year$benefit - dist.year$cost)>0)
+	be.cume.id <- which.max(dist.year$benefit.cume - dist.year$cost.cume>0)
 	be.cume <- dist.year$tenure[be.cume.id]
-
-	writeLines(sprintf("At this rate net benefit begins at year %.2f, breakeven at year %.2f",
-					   be.pt, be.cume))
 
 	col.benefit <- "DarkGreen"
 	col.cost <- "DarkRed"
-	col.be <- "DarkBlue"
-	col.be.cume <- "DarkViolet"
+	col.good <- "DarkOrange"
+	col.bad <- "DarkGoldenrod"
+	col.be <- "SteelBlue"
+	col.be.cume <- "SteelBlue"
 
 	fig1 <- ggplot(data=dist.year, aes(x=tenure)) + 
-			geom_ribbon(fill="red", size=0, aes(ymax=cost,ymin=benefit,alpha=cost>benefit)) + 
+			geom_ribbon(fill=col.cost, size=0, aes(ymax=cost,ymin=benefit,alpha=cost>benefit)) + 
 			scale_alpha_discrete(range=c(0,.1)) + 
 			theme(legend.position="none") +
 			geom_line(col=col.cost, size=1, aes(y=cost)) + 
@@ -66,87 +63,72 @@ runSim202 <- function(max.yrs=3, max.benefit=1.5, cost.ramp=1.7, cost.scale=1.5,
 				 x="Tenure in Years", 
 				 y="% Potential Monthly Value") 
 
-	fig2 <- ggplot(data=dist.good, aes(x=tenure)) + 
-			geom_histogram(fill=col.benefit, binwidth=1/12) +
-			geom_line(aes(y=ev), col=col.benefit) +
-			geom_vline(xintercept=be.pt,col=col.be, size=0.5, linetype="dashed") +
-			geom_vline(xintercept=be.cume,col=col.be.cume, size=0.5, linetype="dashed") +
+	fig2 <- ggplot(data=dist.year, aes(x=tenure)) + 
+			geom_line(aes(y=prob.good), col=col.good, size=1) +
+			geom_line(aes(y=prob.bad), col=col.bad, size=1) +
+			geom_vline(xintercept=be.pt, col=col.be, size=0.5, linetype="dashed") +
+			geom_vline(xintercept=be.cume, col=col.be.cume, size=0.5, linetype="dashed") +
+			scale_y_continuous(labels = percent) +
 			theme_bw() +
 			xlim(c(0,max.yrs)) +
-			labs(title="Distribution of 'good.fit' Employee Tenure", 
+			labs(title="Probability of Employee Tenure", 
 				 x="Tenure in Years", 
-				 y="Count") 
+				 y="Probability") 
 
-	fig3 <- ggplot(data=dist.bad, aes(x=tenure)) + 
-			geom_histogram(fill=col.cost, binwidth=1/12) +
-			geom_line(aes(y=ev), col=col.cost) +
-			geom_vline(xintercept=be.pt,col=col.be, size=0.5, linetype="dashed") +
-			geom_vline(xintercept=be.cume,col=col.be.cume, size=0.5, linetype="dashed") +
+	fig3 <- ggplot(data=dist.year, aes(x=tenure)) + 
+			geom_ribbon(fill=col.good, size=0, alpha=0.5, ymin=0,
+						aes(ymax=(benefit.cume-cost.cume)*prob.good)) + 
+			geom_line(aes(y=(benefit.cume-cost.cume)*prob.good), col=col.good, size=1) +
+			geom_ribbon(fill=col.bad, size=0, alpha=0.5, ymin=0,
+						aes(ymax=(benefit.cume-cost.cume)*prob.bad)) + 
+			geom_line(aes(y=(benefit.cume-cost.cume)*prob.bad), col=col.bad, size=1) +
+			geom_vline(xintercept=be.pt, col=col.be, size=0.5, linetype="dashed") +
+			geom_vline(xintercept=be.cume, col=col.be.cume, size=0.5, linetype="dashed") +
+			geom_hline(yintercept=0, col=col.be.cume, size=0.5, linetype="dotted") +
+			scale_y_continuous(labels = percent) +
 			theme_bw() +
 			xlim(c(0,max.yrs)) +
-			labs(title="Distribution of 'bad.fit' Employee Tenure", 
+			labs(title="Expected Cumulative Net Benefit", 
 				 x="Tenure in Years", 
-				 y="Count") 
+				 y="Cumulative Net Benefit * Probability") 
 
-	fig.all <- arrangeGrob(fig1, fig2, fig3)
 
-	# fig4 <- ggplot(data=dist.good, aes(x=tenure, y=benefit-cost)) + 
-	# 		geom_point(fill="darkred") +
-	# 		theme_bw() +
-	# 		xlim(c(0,max.yrs)) +
-	# 		labs(title="Foo", 
-	# 			 x="Cost", 
-	# 			 y="Benefit") 
+	fig.all <- arrangeGrob(fig1, fig2, fig3, ncol=1)
+	print(fig.all)
 	
+	writeLines("==== new sim ====")
+	writeLines(sprintf("At this rate net benefit begins at year %.2f, breakeven at year %.2f",
+					   be.pt, be.cume))
+
 	writeLines(sprintf("Sim for max.benefit = %.2f, cost.ramp = %.2f, cost.scale = %.2f, salary = %.2f",
 					   max.benefit, cost.ramp, cost.scale, salary))
-	writeLines(sprintf("        center.bad = %.2f, center.good = %.2f, good.bad.ratio = %.2f",
-					   center.bad, center.good, good.bad.ratio))
+	writeLines(sprintf("        shape.good = %.2f, scale.good = %.2f, shape.bad = %.2f, scale.bad = %.2f",
+					   shape.good, scale.good, shape.bad, scale.bad))
 
-	be.good <- mean(dist.good$benefit - dist.good$cost)*100
-	be.bad <- mean(dist.bad$benefit - dist.bad$cost)*100
+	cume.good <- empPredNetCume(max.benefit, cost.ramp, cost.scale, salary, shape.good, scale.good) * 100
+	cume.bad <- empPredNetCume(max.benefit, cost.ramp, cost.scale, salary, shape.bad, scale.bad) * 100
+	cume.total <- cume.good + cume.bad
 
-	writeLines(sprintf("sum.good = %.1f%%, sum.bad = %.1f%%, net = %.1f%%", 
-					   be.good, be.bad, be.good + be.bad))
+	writeLines(sprintf("cume.good = %.1f%%, cume.bad = %.1f%%, total = %.1f%%", 
+					   cume.good, cume.bad, cume.total))
 
-	cume.good <- mean(dist.good$benefit.cume - dist.good$cost.cume)*100
-	cume.bad <- mean(dist.bad$benefit.cume - dist.bad$cost.cume)*100
-
-	writeLines(sprintf("cume.good = %.1f%%, cume.bad = %.1f%%, net = %.1f%%", 
-					   cume.good, cume.bad, cume.good + cume.bad))
-
-	return(fig.all)
+	return(cume.total)
 }
 
-manipSim202 <- function() {
-	manipulate(runSim202(max.yrs, max.benefit, cost.ramp, cost.scale, salary,
-						 center.bad, center.good, good.bad.ratio, run.size=10000),
-			   max.yrs = slider(1, 15, initial=3),
-			   max.benefit = slider(0.25, 3, initial = 1),
-			   cost.ramp = slider(0.5, 3, initial=1.7), 
-			   cost.scale = slider(0.5, 3, initial=1.5), 
-			   salary = slider(0, 1, initial=0.5),
-			   center.bad = slider(0.01, 3, initial=0.9), 
-			   center.good = slider(0.01, 3, initial=2),
-			   good.bad.ratio = slider(0, 1, initial=0.3)) 
-
-	# also can do checkbox, dropdown, button
-}
-	
+# vector-friendly benefit from employee, modeled as a sigmoid function
 empBenefit <- function(tenure, max.benefit) {
-	# vector-friendly benefit from employee, modeled as a sigmoid function
 	1/(1+exp(-(tenure/max.benefit*12-6)))
 }
 
+# vector friendly cumulative benefit, the integral of empBenefit
 empBenefitCume <- function(tenure, max.benefit) {
-	# vector friendly cumulative benefit, the integral of empBenefit
 	# use sapply to make integrate is vector-friendly
 	sapply(tenure, function(x) { integrate(empBenefit, 0, x, 
 										   max.benefit=max.benefit)$value })
 }
 
+# vector-friendly cost of employee, modeled as a gompertz function
 empCost <- function(tenure, cost.ramp, cost.scale, salary) {
-	# vector-friendly cost of employee, modeled as a gompertz function
 	exp(-exp(cost.ramp * tenure)) * cost.scale + salary
 }
 
@@ -159,21 +141,32 @@ empCostCume <- function(tenure, cost.ramp, cost.scale, salary) {
 										   salary=salary)$value })
 }
 
-empPredNet <- function(tenure, max.benefit, cost.ramp, cost.scale, salary,
-					   prob.mean, prob.sd) {
-	# one function so we can integrate
+# one function for one tenure moment, for use by empPredNetCume and graphing
+empPredNet <- function(tenure, 
+					   max.yrs, max.benefit, 
+					   cost.ramp, cost.scale, salary,
+					   d.shape, d.scale) {
+
+	# net = benefit - cost
 	z.net <- empBenefit(tenure, max.benefit) - empCost(tenure, cost.ramp, cost.scale, salary)
 
 	# weighted by probability of that tenure position
-	z.prob <- dlnorm(tenure, prob.mean, prob.sd)
+	z.prob <- dweibull(tenure, shape=d.shape, scale=d.scale)
 
 	return(z.net * z.prob)
 }
 
-empNetCume <- function(tenure, max.benefit, cost.ramp, cost.scale, salary) {
-	integrate(empPredNet, 0, tenure,
+# the sum of all net benefits given these settings
+empPredNetCume <- function(max.benefit, 
+						   cost.ramp, cost.scale, salary, 
+						   d.shape, d.scale) {
+	integrate(empPredNet, 0, Inf,
 			  max.benefit=max.benefit,
 			  cost.ramp=cost.ramp, 
 			  cost.scale=cost.scale, 
-			  salary=salary)$value
+			  salary=salary,
+			  d.shape=d.shape,
+			  d.scale=d.scale
+			  )$value
 }
+	
