@@ -9,21 +9,21 @@ manipSim202 <- function() {
 						 shape.good, scale.good, shape.bad, scale.bad, 
 						 good.bad.ratio),
 			   good.bad.ratio = slider(0, 1, initial=0.3),
-			   shape.good = slider(1, 3, initial=1.8), 
-			   scale.good = slider(0.01, 3, initial=1.5), 
-			   shape.bad = slider(1, 3, initial=1.25), 
-			   scale.bad = slider(0.01, 3, initial=0.9), 
-			   max.benefit = slider(0.25, 10, initial = 1),
-			   cost.ramp = slider(0.5, 10, initial=1.7), 
-			   cost.scale = slider(0.5, 10, initial=1.5), 
+			   shape.good = slider(1, 5, initial=2.5), 
+			   scale.good = slider(0.01, 5, initial=1.5), 
+			   shape.bad = slider(1, 5, initial=1.66), 
+			   scale.bad = slider(0.01, 5, initial=0.33), 
+			   max.benefit = slider(0.25, 3, initial = 0.5),
+			   cost.ramp = slider(0.5, 5, initial=2), 
+			   cost.scale = slider(0.5, 5, initial=2), 
 			   salary = slider(0, 1, initial=0.5),
 			   max.yrs = slider(1, 8, initial=3))
 }
 
-runSim202 <- function(max.yrs=3, max.benefit=1.5, 
-					  cost.ramp=1.7, cost.scale=1.5, salary=0.5,
-					  shape.good=1.8, scale.good=1.5, shape.bad=1.25, scale.bad=0.9, 
-					  good.bad.ratio=0.3) {
+runSim202 <- function(max.yrs=3, max.benefit=0.5, 
+					  cost.ramp=2, cost.scale=2, salary=0.5,
+					  shape.good=2.5, scale.good=1.5, shape.bad=1.66, scale.bad=0.33, 
+					  good.bad.ratio=0.3, show.plot=TRUE) {
 
 	# divide our years uniformly, 100 pts a year
 	dist.year <- as.data.frame( 0:(max.yrs*100)/100 )
@@ -48,67 +48,71 @@ runSim202 <- function(max.yrs=3, max.benefit=1.5,
 	col.be <- "SteelBlue"
 	col.be.cume <- "SteelBlue"
 
-	fig1 <- ggplot(data=dist.year, aes(x=tenure)) + 
-			geom_ribbon(fill=col.cost, size=0, aes(ymax=cost,ymin=benefit,alpha=cost>benefit)) + 
-			scale_alpha_discrete(range=c(0,.1)) + 
-			theme(legend.position="none") +
-			geom_line(col=col.cost, size=1, aes(y=cost)) + 
-			geom_line(col=col.benefit, size=1, aes(y=benefit)) +
-			scale_y_continuous(labels = percent) +
-			geom_vline(xintercept=be.pt, col=col.be, size=0.5, linetype="dashed") +
-			geom_vline(xintercept=be.cume, col=col.be.cume, size=0.5, linetype="dashed") +
-			theme_bw() +
-			theme(legend.position="none") +
-			labs(title="Monthly Benefit & Cost from One Employee", 
-				 x="Tenure in Years", 
-				 y="% Potential Monthly Value") 
+	fig1 <- suppressWarnings(ggplot(data=dist.year, aes(x=tenure)) + 
+							 geom_ribbon(fill=col.cost, size=0, aes(ymax=cost,ymin=benefit,alpha=cost>benefit)) + 
+							 scale_alpha_discrete(range=c(0,.1)) + 
+							 theme(legend.position="none") +
+							 geom_line(col=col.cost, size=1, aes(y=cost)) + 
+							 geom_line(col=col.benefit, size=1, aes(y=benefit)) +
+							 scale_y_continuous(labels = percent) +
+							 geom_vline(xintercept=be.pt, col=col.be, size=0.5, linetype="dashed") +
+							 geom_vline(xintercept=be.cume, col=col.be.cume, size=0.5, linetype="dashed") +
+							 theme_bw() +
+							 theme(legend.position="none") +
+							 labs(title="Monthly Benefit & Cost from One Employee", 
+								  x="Tenure in Years", 
+								  y="% Potential Monthly Value"))
 
-	fig2 <- ggplot(data=dist.year, aes(x=tenure)) + 
-			geom_line(aes(y=prob.good), col=col.good, size=1) +
-			geom_line(aes(y=prob.bad), col=col.bad, size=1) +
-			geom_vline(xintercept=be.pt, col=col.be, size=0.5, linetype="dashed") +
-			geom_vline(xintercept=be.cume, col=col.be.cume, size=0.5, linetype="dashed") +
-			scale_y_continuous(labels = percent) +
-			theme_bw() +
-			xlim(c(0,max.yrs)) +
-			labs(title="Probability of Employee Tenure", 
-				 x="Tenure in Years", 
-				 y="Probability") 
+	fig2 <- suppressWarnings(ggplot(data=dist.year, aes(x=tenure)) + 
+							 geom_line(aes(y=prob.good), col=col.good, size=1) +
+							 geom_line(aes(y=prob.bad), col=col.bad, size=1) +
+							 geom_vline(xintercept=be.pt, col=col.be, size=0.5, linetype="dashed") +
+							 geom_vline(xintercept=be.cume, col=col.be.cume, size=0.5, linetype="dashed") +
+							 scale_y_continuous(labels = percent) +
+							 theme_bw() +
+							 xlim(c(0,max.yrs)) +
+							 labs(title="Probability of Employee Tenure", 
+								  x="Tenure in Years", 
+								  y="Probability"))
 
-	fig3 <- ggplot(data=dist.year, aes(x=tenure)) + 
-			geom_ribbon(fill=col.good, size=0, alpha=0.5, ymin=0,
-						aes(ymax=(benefit.cume-cost.cume)*prob.good)) + 
-			geom_line(aes(y=(benefit.cume-cost.cume)*prob.good), col=col.good, size=1) +
-			geom_ribbon(fill=col.bad, size=0, alpha=0.5, ymin=0,
-						aes(ymax=(benefit.cume-cost.cume)*prob.bad)) + 
-			geom_line(aes(y=(benefit.cume-cost.cume)*prob.bad), col=col.bad, size=1) +
-			geom_vline(xintercept=be.pt, col=col.be, size=0.5, linetype="dashed") +
-			geom_vline(xintercept=be.cume, col=col.be.cume, size=0.5, linetype="dashed") +
-			geom_hline(yintercept=0, col=col.be.cume, size=0.5, linetype="dotted") +
-			scale_y_continuous(labels = percent) +
-			theme_bw() +
-			xlim(c(0,max.yrs)) +
-			labs(title="Expected Cumulative Net Benefit", 
-				 x="Tenure in Years", 
-				 y="Cumulative Net Benefit * Probability") 
+	fig3 <- suppressWarnings(ggplot(data=dist.year, aes(x=tenure)) + 
+							 geom_ribbon(fill=col.good, size=0, alpha=0.5, ymin=0,
+										 aes(ymax=(benefit.cume-cost.cume)*prob.good)) + 
+							 geom_line(aes(y=(benefit.cume-cost.cume)*prob.good), col=col.good, size=1) +
+							 geom_ribbon(fill=col.bad, size=0, alpha=0.5, ymin=0,
+										 aes(ymax=(benefit.cume-cost.cume)*prob.bad)) + 
+							 geom_line(aes(y=(benefit.cume-cost.cume)*prob.bad), col=col.bad, size=1) +
+							 geom_vline(xintercept=be.pt, col=col.be, size=0.5, linetype="dashed") +
+							 geom_vline(xintercept=be.cume, col=col.be.cume, size=0.5, linetype="dashed") +
+							 geom_hline(yintercept=0, col=col.be.cume, size=0.5, linetype="dotted") +
+							 scale_y_continuous(labels = percent) +
+							 theme_bw() +
+							 xlim(c(0,max.yrs)) +
+							 labs(title="Expected Cumulative Net Benefit", 
+								  x="Tenure in Years", 
+								  y="Cumulative Net Benefit * Probability"))
 
 
 	fig.all <- arrangeGrob(fig1, fig2, fig3, ncol=1)
-	print(fig.all)
+	if (show.plot) {
+		print(fig.all)
+	}
 	
 	writeLines("==== new sim ====")
-	writeLines(sprintf("At this rate net benefit begins at year %.2f, breakeven at year %.2f",
-					   be.pt, be.cume))
 
-	writeLines(sprintf("Sim for max.benefit = %.2f, cost.ramp = %.2f, cost.scale = %.2f, salary = %.2f",
-					   max.benefit, cost.ramp, cost.scale, salary))
-	writeLines(sprintf("        shape.good = %.2f, scale.good = %.2f, shape.bad = %.2f, scale.bad = %.2f",
-					   shape.good, scale.good, shape.bad, scale.bad))
+	# writeLines(sprintf("Sim for max.benefit = %.2f, cost.ramp = %.2f, cost.scale = %.2f, salary = %.2f",
+	# 				   max.benefit, cost.ramp, cost.scale, salary))
+	# writeLines(sprintf("        shape.good = %.2f, scale.good = %.2f, shape.bad = %.2f, scale.bad = %.2f",
+	# 				   shape.good, scale.good, shape.bad, scale.bad))
 
-	cume.good <- empPredNetCume(max.benefit, cost.ramp, cost.scale, salary, shape.good, scale.good) * 100
-	cume.bad <- empPredNetCume(max.benefit, cost.ramp, cost.scale, salary, shape.bad, scale.bad) * 100
+	cume.good <- empPredNetCume(max.benefit, cost.ramp, cost.scale, salary, 
+								shape.good, scale.good) * 100 * good.bad.ratio
+	cume.bad <- empPredNetCume(max.benefit, cost.ramp, cost.scale, salary, 
+							   shape.bad, scale.bad) * 100 * (1-good.bad.ratio)
 	cume.total <- cume.good + cume.bad
 
+	writeLines(sprintf("At this rate net benefit begins at year %.2f, breakeven at year %.2f",
+					   be.pt, be.cume))
 	writeLines(sprintf("cume.good = %.1f%%, cume.bad = %.1f%%, total = %.1f%%", 
 					   cume.good, cume.bad, cume.total))
 
@@ -169,4 +173,6 @@ empPredNetCume <- function(max.benefit,
 			  d.scale=d.scale
 			  )$value
 }
+
+
 	
