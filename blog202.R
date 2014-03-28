@@ -14,7 +14,7 @@ def$shape.good <- 2.5
 def$scale.good <- 1.5
 def$shape.bad <- 1.66
 def$scale.bad <- 0.33
-def$good.bad.ratio <- 0.3
+def$good.bad.ratio <- 0.6
 def$max.yrs <- 3
 
 # run the sim with manipulators
@@ -23,15 +23,15 @@ manipSim202 <- function() {
 						 cost.ramp, cost.scale, salary,
 						 shape.good, scale.good, shape.bad, scale.bad, 
 						 good.bad.ratio),
-			   good.bad.ratio = slider(0, 1, initial=def$good.bad.ratio),
-			   shape.good = slider(1, 5, initial=def$shape.good), 
+			   good.bad.ratio = slider(0.0, 1, initial=def$good.bad.ratio),
+			   shape.good = slider(1.01, 5, initial=def$shape.good), 
 			   scale.good = slider(0.01, 5, initial=def$scale.good), 
-			   shape.bad = slider(1, 5, initial=def$shape.bad), 
+			   shape.bad = slider(1.01, 5, initial=def$shape.bad), 
 			   scale.bad = slider(0.01, 5, initial=def$scale.bad), 
 			   max.benefit = slider(0.25, 3, initial =def$max.benefit),
 			   cost.ramp = slider(0.5, 5, initial=def$cost.ramp), 
 			   cost.scale = slider(0.5, 5, initial=def$cost.scale), 
-			   salary = slider(0, 1, initial=def$salary),
+			   salary = slider(0.0, 1, initial=def$salary),
 			   max.yrs = slider(1, 8, initial=def$max.yrs))
 }
 
@@ -51,6 +51,8 @@ runSim202 <- function(max.yrs=def$max.yrs, max.benefit=def$max.benefit,
 	dist.year$cost.cume <- empCostCume(dist.year$tenure, cost.ramp, cost.scale, salary)
 	dist.year$prob.good <- dweibull(dist.year$tenure, shape=shape.good, scale=scale.good)
 	dist.year$prob.bad <- dweibull(dist.year$tenure, shape=shape.bad, scale=scale.bad)
+	dist.year$prob.good.wt <- dist.year$prob.good * good.bad.ratio
+	dist.year$prob.bad.wt <- dist.year$prob.bad * (1-good.bad.ratio)
 
 	# calc breakeven points
 	be.pt.id <- which.max(dist.year$benefit - dist.year$cost>0)
@@ -100,11 +102,11 @@ runSim202 <- function(max.yrs=def$max.yrs, max.benefit=def$max.benefit,
 							 geom_vline(xintercept=be.cume, col=col.be.cume, size=0.5, linetype="dashed") +
 							 geom_hline(yintercept=0, col=col.be.cume, size=0.5, linetype="dotted") +
 							 geom_ribbon(fill=col.bad, size=0, alpha=0.5, ymin=0,
-										 aes(ymax=(benefit.cume-cost.cume)*prob.bad)) + 
-							 geom_line(aes(y=(benefit.cume-cost.cume)*prob.bad), col=col.bad, size=1) +
+										 aes(ymax=(benefit.cume-cost.cume)*prob.bad.wt)) + 
+							 geom_line(aes(y=(benefit.cume-cost.cume)*prob.bad.wt), col=col.bad, size=1) +
 							 geom_ribbon(fill=col.good, size=0, alpha=0.5, ymin=0,
-										 aes(ymax=(benefit.cume-cost.cume)*prob.good)) + 
-							 geom_line(aes(y=(benefit.cume-cost.cume)*prob.good), col=col.good, size=1) +
+										 aes(ymax=(benefit.cume-cost.cume)*prob.good.wt)) + 
+							 geom_line(aes(y=(benefit.cume-cost.cume)*prob.good.wt), col=col.good, size=1) +
 							 scale_y_continuous(labels = percent) +
 							 theme_bw() +
 							 xlim(c(0,max.yrs)) +
@@ -186,7 +188,7 @@ runPredNetCume <- function(max.benefit = def$max.benefit,
 						  good.bad.ratio = def$good.bad.ratio,
 						  verbose=FALSE) {
 
-	if (verbose) {
+	if (FALSE & verbose) {
 		writeLines(sprintf("Sim for max.benefit = %.2f, cost.ramp = %.2f, cost.scale = %.2f, salary = %.2f",
 						   max.benefit, cost.ramp, cost.scale, salary))
 		writeLines(sprintf("  shape.good = %.2f, scale.good = %.2f, shape.bad = %.2f, scale.bad = %.2f",
@@ -212,71 +214,105 @@ runPredNetCume <- function(max.benefit = def$max.benefit,
 # modify one variable through its range to calc sensitivity
 # limited analysis - just based on the "reasonable" starting point
 runSensitivityTests <- function() {
+	writeLines("Running Sensitivity Tests")
+
 	# modify good.bad.ratio from 0-1 from base of 0.3
+	writeLines(sprintf("  good.bad.ratio:\t1%% change from %.2f results in %.2f%% change in ENCB",
+					   def$good.bad.ratio, 
+					   (runPredNetCume(good.bad.ratio=def$good.bad.ratio*1.01) / 
+						runPredNetCume() - 1) * 100 ))
 	z.in <- seq(0, 1, 0.05)
-	g.gbr <- sensitivityPlot(z.in, 
-							 sapply(z.in, function(x) {runPredNetCume(good.bad.ratio=x)}),
-							 "Good.Bad.Ratio")
+	g.gbr <- sensitivityPlot("Good.Bad.Ratio", def$good.bad.ratio, z.in, 
+							 sapply(z.in, function(x) {runPredNetCume(good.bad.ratio=x)}))
 
 	# modify shape.good from 1-5 from base of 2.5 
-	z.in <- seq(0, 5, 0.05)
-	g.shg <- sensitivityPlot(z.in, 
-							 sapply(z.in, function(x) {runPredNetCume(shape.good=x)}),
-							 "Shape.Good")
+	writeLines(sprintf("  shape.good:\t1%% change from %.2f results in %.2f%% change in ENCB",
+					   def$shape.good, 
+					   (runPredNetCume(shape.good=def$shape.good*1.01) / 
+						runPredNetCume() - 1) * 100 ))
+	z.in <- seq(1, 5, 0.05)
+	g.shg <- sensitivityPlot("Shape.Good", def$shape.good, z.in, 
+							 sapply(z.in, function(x) {runPredNetCume(shape.good=x)}))
 
 	# modify scale.good from 0.01-5 from base of 1.5 
-	z.in <- seq(0, 5, 0.05)
-	g.scg <- sensitivityPlot(z.in, 
-							 sapply(z.in, function(x) {runPredNetCume(scale.good=x)}),
-							 "Scale.Good")
+	writeLines(sprintf("  scale.good:\t1%% change from %.2f results in %.2f%% change in ENCB",
+					   def$scale.good, 
+					   (runPredNetCume(scale.good=def$scale.good*1.01) / 
+						runPredNetCume() - 1) * 100 ))
+	z.in <- seq(0.01, 5, 0.05)
+	g.scg <- sensitivityPlot("Scale.Good", def$scale.good, z.in, 
+							 sapply(z.in, function(x) {runPredNetCume(scale.good=x)}))
 
 	# modify shape.bad from 1-5 from base of 1.66 
-	z.in <- seq(0, 5, 0.05)
-	g.shb <- sensitivityPlot(z.in, 
-							 sapply(z.in, function(x) {runPredNetCume(shape.bad=x)}),
-							 "Shape.Bad")
+	writeLines(sprintf("  shape.bad:\t1%% change from %.2f results in %.2f%% change in ENCB",
+					   def$shape.bad, 
+					   (runPredNetCume(shape.bad=def$shape.bad*1.01) / 
+						runPredNetCume() - 1) * 100 ))
+	z.in <- seq(1, 5, 0.05)
+	g.shb <- sensitivityPlot("Shape.Bad", def$shape.bad, z.in, 
+							 sapply(z.in, function(x) {runPredNetCume(shape.bad=x)}))
 
 	# modify scale.bad from 0.01-5 from base of 0.33 
-	z.in <- seq(0, 5, 0.05)
-	g.scb <- sensitivityPlot(z.in, 
-							 sapply(z.in, function(x) {runPredNetCume(scale.bad=x)}),
-							 "Scale.Bad")
+	writeLines(sprintf("  scale.bad:\t1%% change from %.2f results in %.2f%% change in ENCB",
+					   def$scale.bad, 
+					   (runPredNetCume(scale.bad=def$scale.bad*1.01) / 
+						runPredNetCume() - 1) * 100 ))
+	z.in <- seq(0.01, 5, 0.05)
+	g.scb <- sensitivityPlot("Scale.Bad", def$scale.bad, z.in, 
+							 sapply(z.in, function(x) {runPredNetCume(scale.bad=x)}))
 
 	# modify max.benefit from 0.25-3, initial = 0.5
+	writeLines(sprintf("  max.benefit:\t1%% change from %.2f results in %.2f%% change in ENCB",
+					   def$max.benefit, 
+					   (runPredNetCume(max.benefit=def$max.benefit*1.01) / 
+						runPredNetCume() - 1) * 100 ))
 	z.in <- seq(0.25, 3, 0.05)
-	g.mb <- sensitivityPlot(z.in, 
-							 sapply(z.in, function(x) {runPredNetCume(max.benefit=x)}),
-							 "Max.Benefit")
+	g.mb <- sensitivityPlot("Max.Benefit", def$max.benefit, z.in, 
+							 sapply(z.in, function(x) {runPredNetCume(max.benefit=x)}))
 
-	# modify cost.ramp from 0.5-5 from base of 2 
+	# modify cost.ramp from 0.5-5 from base of 3.5 
+	writeLines(sprintf("  cost.ramp:\t1%% change from %.2f results in %.2f%% change in ENCB",
+					   def$cost.ramp, 
+					   (runPredNetCume(cost.ramp=def$cost.ramp*1.01) / 
+						runPredNetCume() - 1) * 100 ))
 	z.in <- seq(0.5, 5, 0.05)
-	g.cr <- sensitivityPlot(z.in, 
-							 sapply(z.in, function(x) {runPredNetCume(cost.ramp=x)}),
-							 "Cost.Ramp")
+	g.cr <- sensitivityPlot("Cost.Ramp", def$cost.ramp, z.in, 
+							 sapply(z.in, function(x) {runPredNetCume(cost.ramp=x)}))
+
 	# modify cost.scale from 0.5-5 from base of 2 
+	writeLines(sprintf("  cost.scale:\t1%% change from %.2f results in %.2f%% change in ENCB",
+					   def$cost.scale, 
+					   (runPredNetCume(cost.scale=def$cost.scale*1.01) / 
+						runPredNetCume() - 1) * 100 ))
 	z.in <- seq(0.5, 5, 0.05)
-	g.cs <- sensitivityPlot(z.in, 
-							 sapply(z.in, function(x) {runPredNetCume(cost.scale=x)}),
-							 "Cost.Scale")
+	g.cs <- sensitivityPlot("Cost.Scale", def$cost.scale, z.in, 
+							 sapply(z.in, function(x) {runPredNetCume(cost.scale=x)}))
 
 	# modify salary from 0-1 from base of 0.5
+	writeLines(sprintf("  salary:\t1%% change from %.2f results in %.2f%% change in ENCB",
+					   def$salary, 
+					   (runPredNetCume(salary=def$salary*1.01) / 
+						runPredNetCume() - 1) * 100 ))
 	z.in <- seq(0, 1, 0.05)
-	g.sa <- sensitivityPlot(z.in, 
-							 sapply(z.in, function(x) {runPredNetCume(salary=x)}),
-							 "Salary")
+	g.sa <- sensitivityPlot("Salary", def$salary, z.in, 
+							 sapply(z.in, function(x) {runPredNetCume(salary=x)}))
 
 	# plot all of them
-	fig.all <- arrangeGrob(g.gbr, ncol=1)
+	writeLines("  making plot")
+	fig.all <- arrangeGrob(g.gbr, g.shg, g.scg, 
+						   g.shb, g.scb, g.mb, 
+						   g.cr, g.cs, g.sa, ncol=3)
 
 	return(fig.all)
 }
 	
-sensitivityPlot <- function(input, output, label) {
-	zt <- data.frame(input=input, output=output)
-	zg <- suppressWarnings(ggplot(data=t.gbr, aes(x=input, y=output)) + 
-						   geom_point(col="DarkGreen") +
-						   geom_smooth(method="loess") +
+sensitivityPlot <- function(label, def.value, input, output) {
+	zd <- data.frame(input=input, output=output)
+	zg <- suppressWarnings(ggplot(data=zd, aes(x=input, y=output)) + 
+						   geom_vline(xintercept=def.value, col="SteelBlue", linetype="dashed") +
+						   geom_hline(yintercept=0, col="DarkRed", linetype="dotted") +
+						   geom_line(col="DarkGreen", size=1) +
 						   theme_bw() +
-						   labs(x=label))
+						   labs(x=label, y="Exp Net Cume Benefit"))
 	return(zg)
 }
