@@ -16,6 +16,13 @@ def$shape.bad <- 1.66
 def$scale.bad <- 0.33
 def$good.bad.ratio <- 0.6
 def$max.yrs <- 3
+def$col.benefit <- "DarkGreen"
+def$col.cost <- "DarkRed"
+def$col.good <- "RoyalBlue2"
+def$col.bad <- "DarkOrange2"
+def$col.be <- "SteelBlue"
+def$col.be.cume <- "SteelBlue"
+
 
 # run the sim with manipulators
 manipSim202 <- function() {
@@ -60,21 +67,14 @@ runSim202 <- function(max.yrs=def$max.yrs, max.benefit=def$max.benefit,
 	be.cume.id <- which.max(dist.year$benefit.cume - dist.year$cost.cume>0)
 	be.cume <- dist.year$tenure[be.cume.id]
 
-	col.benefit <- "DarkGreen"
-	col.cost <- "DarkRed"
-	col.good <- "RoyalBlue2"
-	col.bad <- "DarkOrange2"
-	col.be <- "SteelBlue"
-	col.be.cume <- "SteelBlue"
-
 	fig1 <- suppressWarnings(ggplot(data=dist.year, aes(x=tenure)) + 
-							 geom_vline(xintercept=be.pt, col=col.be, size=0.5, linetype="dashed") +
-							 geom_vline(xintercept=be.cume, col=col.be.cume, size=0.5, linetype="dashed") +
-							 geom_ribbon(fill=col.cost, size=0, aes(ymax=cost,ymin=benefit,alpha=cost>benefit)) + 
+							 geom_vline(xintercept=be.pt, col=def$col.be, size=0.5, linetype="dashed") +
+							 geom_vline(xintercept=be.cume, col=def$col.be.cume, size=0.5, linetype="dashed") +
+							 geom_ribbon(fill=def$col.cost, size=0, aes(ymax=cost,ymin=benefit,alpha=cost>benefit)) + 
 							 scale_alpha_discrete(range=c(0,.25)) + 
 							 theme(legend.position="none") +
-							 geom_line(col=col.cost, size=1, aes(y=cost)) + 
-							 geom_line(col=col.benefit, size=1, aes(y=benefit)) +
+							 geom_line(col=def$col.cost, size=1, aes(y=cost)) + 
+							 geom_line(col=def$col.benefit, size=1, aes(y=benefit)) +
 							 scale_y_continuous(labels = percent) +
 							 theme_bw() +
 							 theme(legend.position="none") +
@@ -85,10 +85,10 @@ runSim202 <- function(max.yrs=def$max.yrs, max.benefit=def$max.benefit,
 			# TODO annotate with breakeven numbers be.pt, be.cume
 
 	fig2 <- suppressWarnings(ggplot(data=dist.year, aes(x=tenure)) + 
-							 geom_vline(xintercept=be.pt, col=col.be, size=0.5, linetype="dashed") +
-							 geom_vline(xintercept=be.cume, col=col.be.cume, size=0.5, linetype="dashed") +
-							 geom_line(aes(y=prob.bad), col=col.bad, size=1) +
-							 geom_line(aes(y=prob.good), col=col.good, size=1) +
+							 geom_vline(xintercept=be.pt, col=def$col.be, size=0.5, linetype="dashed") +
+							 geom_vline(xintercept=be.cume, col=def$col.be.cume, size=0.5, linetype="dashed") +
+							 geom_line(aes(y=prob.bad), col=def$col.bad, size=1) +
+							 geom_line(aes(y=prob.good), col=def$col.good, size=1) +
 							 scale_y_continuous(labels = percent) +
 							 theme_bw() +
 							 xlim(c(0,max.yrs)) +
@@ -98,15 +98,15 @@ runSim202 <- function(max.yrs=def$max.yrs, max.benefit=def$max.benefit,
 			# TODO annotate with color for lines
 
 	fig3 <- suppressWarnings(ggplot(data=dist.year, aes(x=tenure)) + 
-							 geom_vline(xintercept=be.pt, col=col.be, size=0.5, linetype="dashed") +
-							 geom_vline(xintercept=be.cume, col=col.be.cume, size=0.5, linetype="dashed") +
-							 geom_hline(yintercept=0, col=col.be.cume, size=0.5, linetype="dotted") +
-							 geom_ribbon(fill=col.bad, size=0, alpha=0.5, ymin=0,
+							 geom_vline(xintercept=be.pt, col=def$col.be, size=0.5, linetype="dashed") +
+							 geom_vline(xintercept=be.cume, col=def$col.be.cume, size=0.5, linetype="dashed") +
+							 geom_hline(yintercept=0, col=def$col.be.cume, size=0.5, linetype="dotted") +
+							 geom_ribbon(fill=def$col.bad, size=0, alpha=0.5, ymin=0,
 										 aes(ymax=(benefit.cume-cost.cume)*prob.bad.wt)) + 
-							 geom_line(aes(y=(benefit.cume-cost.cume)*prob.bad.wt), col=col.bad, size=1) +
-							 geom_ribbon(fill=col.good, size=0, alpha=0.5, ymin=0,
+							 geom_line(aes(y=(benefit.cume-cost.cume)*prob.bad.wt), col=def$col.bad, size=1) +
+							 geom_ribbon(fill=def$col.good, size=0, alpha=0.5, ymin=0,
 										 aes(ymax=(benefit.cume-cost.cume)*prob.good.wt)) + 
-							 geom_line(aes(y=(benefit.cume-cost.cume)*prob.good.wt), col=col.good, size=1) +
+							 geom_line(aes(y=(benefit.cume-cost.cume)*prob.good.wt), col=def$col.good, size=1) +
 							 scale_y_continuous(labels = percent) +
 							 theme_bw() +
 							 xlim(c(0,max.yrs)) +
@@ -315,4 +315,49 @@ sensitivityPlot <- function(label, def.value, input, output) {
 						   theme_bw() +
 						   labs(x=label, y="Exp Net Cume Benefit"))
 	return(zg)
+}
+
+runHistograms <- function(sample=1000,
+						  good.bad.ratio = def$good.bad.ratio, 
+						  shape.good = def$shape.good, 
+						  scale.good = def$scale.good, 
+						  shape.bad = def$shape.bad, 
+						  scale.bad = def$scale.bad) {
+
+	good.fit <- rweibull(sample * good.bad.ratio, shape=shape.good, scale=scale.good)
+	bad.fit <- rweibull(sample * (1-good.bad.ratio), shape=shape.bad, scale=scale.bad)
+
+	fig1 <- ggplot(data=data.frame(tenure=c(good.fit, bad.fit)), aes(x=tenure)) + 
+				geom_histogram(binwidth=1/12, fill=def$col.benefit) + 
+				xlim(c(0,3)) +
+				theme_bw() +
+				theme(plot.title = element_text(size = 10),
+					  axis.title = element_text(size = 8)) +
+				labs(title="All Employees", 
+					 x="Tenure in Years", 
+					 y="Count")
+
+	fig2 <- ggplot(data=data.frame(tenure=good.fit), aes(x=tenure)) + 
+				geom_histogram(binwidth=1/12, fill=def$col.good) + 
+				xlim(c(0,3)) +
+				theme_bw() +
+				theme(plot.title = element_text(size = 10),
+					  axis.title = element_text(size = 8)) +
+				labs(title="'Good Fit' Employees", 
+					 x="Tenure in Years", 
+					 y="Count")
+
+	fig3 <- ggplot(data=data.frame(tenure=bad.fit), aes(x=tenure)) + 
+				geom_histogram(binwidth=1/12, fill=def$col.bad) + 
+				xlim(c(0,3)) +
+				theme_bw() +
+				theme(plot.title = element_text(size = 10),
+					  axis.title = element_text(size = 8)) +
+				labs(title="'Bad Fit' Employees", 
+					 x="Tenure in Years", 
+					 y="Count")
+
+	fig.all <- arrangeGrob(fig1, fig2, fig3, main="Employment Tenure", ncol=1)
+
+	return(fig.all)
 }
