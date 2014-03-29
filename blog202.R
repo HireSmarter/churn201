@@ -3,6 +3,8 @@ library(gridExtra)
 library(scales)
 library(manipulate)
 
+gpal <- scales::hue_pal(h = c(0, 360) + 15, c = 100, l = 65, h.start = 0, direction=1)(8)
+
 # set up my defaults in a global list
 def <- list()
 def$max.yrs <- 3
@@ -16,12 +18,12 @@ def$shape.bad <- 1.66
 def$scale.bad <- 0.33
 def$good.bad.ratio <- 0.6
 def$max.yrs <- 3
-def$col.benefit <- "DarkGreen"
-def$col.cost <- "DarkRed"
-def$col.good <- "RoyalBlue2"
-def$col.bad <- "DarkOrange2"
-def$col.be <- "SteelBlue"
-def$col.be.cume <- "SteelBlue"
+def$col.benefit <- gpal[3]	# dark green
+def$col.cost <- gpal[1]		# salmon
+def$col.good <- gpal[5]		# blue-grey
+def$col.bad <- gpal[2]		# brown
+def$col.be <- gpal[7]		# magenta
+def$col.be.cume <- gpal[8]	# purple
 
 
 # run the sim with manipulators
@@ -77,6 +79,8 @@ runSim202 <- function(max.yrs=def$max.yrs, max.benefit=def$max.benefit,
 							 geom_line(col=def$col.benefit, size=1, aes(y=benefit)) +
 							 scale_y_continuous(labels = percent) +
 							 theme_bw() +
+							 theme(plot.title = element_text(size = 10),
+								   axis.title = element_text(size = 8)) +
 							 theme(legend.position="none") +
 							 labs(title="Monthly Benefit & Cost from One Employee", 
 								  x="Tenure in Years", 
@@ -91,6 +95,8 @@ runSim202 <- function(max.yrs=def$max.yrs, max.benefit=def$max.benefit,
 							 geom_line(aes(y=prob.good), col=def$col.good, size=1) +
 							 scale_y_continuous(labels = percent) +
 							 theme_bw() +
+							 theme(plot.title = element_text(size = 10),
+								   axis.title = element_text(size = 8)) +
 							 xlim(c(0,max.yrs)) +
 							 labs(title="Probability of Employee Termination", 
 								  x="Tenure in Years", 
@@ -109,6 +115,8 @@ runSim202 <- function(max.yrs=def$max.yrs, max.benefit=def$max.benefit,
 							 geom_line(aes(y=(benefit.cume-cost.cume)*prob.good.wt), col=def$col.good, size=1) +
 							 scale_y_continuous(labels = percent) +
 							 theme_bw() +
+							 theme(plot.title = element_text(size = 10),
+								   axis.title = element_text(size = 8)) +
 							 xlim(c(0,max.yrs)) +
 							 labs(title="Expected Cumulative Net Benefit", 
 								  x="Tenure in Years", 
@@ -309,9 +317,9 @@ runSensitivityTests <- function() {
 sensitivityPlot <- function(label, def.value, input, output) {
 	zd <- data.frame(input=input, output=output)
 	zg <- suppressWarnings(ggplot(data=zd, aes(x=input, y=output)) + 
-						   geom_vline(xintercept=def.value, col="SteelBlue", linetype="dashed") +
-						   geom_hline(yintercept=0, col="DarkRed", linetype="dotted") +
-						   geom_line(col="DarkGreen", size=1) +
+						   geom_vline(xintercept=def.value, col=def$col.be, linetype="dashed") +
+						   geom_hline(yintercept=0, col=def$col.be, linetype="dotted") +
+						   geom_line(col=def$col.benefit, size=1) +
 						   theme_bw() +
 						   labs(x=label, y="Exp Net Cume Benefit"))
 	return(zg)
