@@ -22,8 +22,8 @@ def$col.benefit <- gpal[3]	# dark green
 def$col.cost <- gpal[1]		# salmon
 def$col.good <- gpal[5]		# blue-grey
 def$col.bad <- gpal[2]		# brown
-def$col.be <- gpal[7]		# magenta
-def$col.be.cume <- gpal[8]	# purple
+def$col.be <- "DarkGray"
+def$col.be.cume <- "DarkGray"
 
 
 # run the sim with manipulators
@@ -49,7 +49,9 @@ runSim202 <- function(max.yrs=def$max.yrs, max.benefit=def$max.benefit,
 					  cost.ramp=def$cost.ramp, cost.scale=def$cost.scale, salary=def$salary,
 					  shape.good=def$shape.good, scale.good=def$scale.good, 
 					  shape.bad=def$shape.bad, scale.bad=def$scale.bad, 
-					  good.bad.ratio=def$good.bad.ratio) {
+					  good.bad.ratio=def$good.bad.ratio,
+					  do.annotate=FALSE,
+					  list.plots=FALSE) {
 
 	# divide our years uniformly, 100 pts a year
 	dist.year <- as.data.frame( 0:(max.yrs*100)/100 )
@@ -64,73 +66,169 @@ runSim202 <- function(max.yrs=def$max.yrs, max.benefit=def$max.benefit,
 	dist.year$prob.bad.wt <- dist.year$prob.bad * (1-good.bad.ratio)
 
 	# calc breakeven points
+	# TODO C: could solve for breakeven point in another way, to handle off-chart cases, but they would be off the chart.... so who cares.
 	be.pt.id <- which.max(dist.year$benefit - dist.year$cost>0)
 	be.pt <- dist.year$tenure[be.pt.id]
 	be.cume.id <- which.max(dist.year$benefit.cume - dist.year$cost.cume>0)
 	be.cume <- dist.year$tenure[be.cume.id]
 
-	fig1 <- suppressWarnings(ggplot(data=dist.year, aes(x=tenure)) + 
-							 geom_vline(xintercept=be.pt, col=def$col.be, size=0.5, linetype="dashed") +
-							 geom_vline(xintercept=be.cume, col=def$col.be.cume, size=0.5, linetype="dashed") +
-							 geom_ribbon(fill=def$col.cost, size=0, aes(ymax=cost,ymin=benefit,alpha=cost>benefit)) + 
-							 scale_alpha_discrete(range=c(0,.25)) + 
-							 theme(legend.position="none") +
-							 geom_line(col=def$col.cost, size=1, aes(y=cost)) + 
-							 geom_line(col=def$col.benefit, size=1, aes(y=benefit)) +
-							 scale_y_continuous(labels = percent) +
-							 theme_bw() +
-							 theme(plot.title = element_text(size = 10),
-								   axis.title = element_text(size = 8)) +
-							 theme(legend.position="none") +
-							 labs(title="Monthly Benefit & Cost from One Employee", 
-								  x="Tenure in Years", 
-								  y="% Potential Monthly Value"))
-			# TODO annotate with labels
-			# TODO annotate with breakeven numbers be.pt, be.cume
+	writeLines(sprintf("daily breakeven at %.2f, cume breakeven at %.2f", be.pt, be.cume))
 
-	fig2 <- suppressWarnings(ggplot(data=dist.year, aes(x=tenure)) + 
-							 geom_vline(xintercept=be.pt, col=def$col.be, size=0.5, linetype="dashed") +
-							 geom_vline(xintercept=be.cume, col=def$col.be.cume, size=0.5, linetype="dashed") +
-							 geom_line(aes(y=prob.bad), col=def$col.bad, size=1) +
-							 geom_line(aes(y=prob.good), col=def$col.good, size=1) +
-							 scale_y_continuous(labels = percent) +
-							 theme_bw() +
-							 theme(plot.title = element_text(size = 10),
-								   axis.title = element_text(size = 8)) +
-							 xlim(c(0,max.yrs)) +
-							 labs(title="Probability of Employee Termination", 
-								  x="Tenure in Years", 
-								  y="Probability"))
-			# TODO annotate with color for lines
-
-	fig3 <- suppressWarnings(ggplot(data=dist.year, aes(x=tenure)) + 
-							 geom_vline(xintercept=be.pt, col=def$col.be, size=0.5, linetype="dashed") +
-							 geom_vline(xintercept=be.cume, col=def$col.be.cume, size=0.5, linetype="dashed") +
-							 geom_hline(yintercept=0, col=def$col.be.cume, size=0.5, linetype="dotted") +
-							 geom_ribbon(fill=def$col.bad, size=0, alpha=0.5, ymin=0,
-										 aes(ymax=(benefit.cume-cost.cume)*prob.bad.wt)) + 
-							 geom_line(aes(y=(benefit.cume-cost.cume)*prob.bad.wt), col=def$col.bad, size=1) +
-							 geom_ribbon(fill=def$col.good, size=0, alpha=0.5, ymin=0,
-										 aes(ymax=(benefit.cume-cost.cume)*prob.good.wt)) + 
-							 geom_line(aes(y=(benefit.cume-cost.cume)*prob.good.wt), col=def$col.good, size=1) +
-							 scale_y_continuous(labels = percent) +
-							 theme_bw() +
-							 theme(plot.title = element_text(size = 10),
-								   axis.title = element_text(size = 8)) +
-							 xlim(c(0,max.yrs)) +
-							 labs(title="Expected Cumulative Net Benefit", 
-								  x="Tenure in Years", 
-								  y="Cumulative Net Benefit x Probability"))
-			# TODO annotate with color for lines
-			# TODO annotate with cume result
-
-	fig.all <- arrangeGrob(fig1, fig2, fig3, ncol=1)
-
-	runPredNetCume(max.benefit, cost.ramp, cost.scale, salary,
+	evh <- runPredNetCume(max.benefit, cost.ramp, cost.scale, salary,
 				  shape.good, scale.good, shape.bad, scale.bad, 
 				  good.bad.ratio, verbose=TRUE)
 
-	return(fig.all)
+	gglist <- list()
+
+	gglist$fig4 <- suppressWarnings(ggplot(data=dist.year, aes(x=tenure)) + 
+									 geom_vline(xintercept=be.pt, col=def$col.be, size=0.5, linetype="dashed") +
+									 geom_vline(xintercept=be.cume, col=def$col.be.cume, size=0.5, linetype="dashed") +
+									 geom_line(aes(y=prob.bad), col=def$col.bad, size=1) +
+									 geom_line(aes(y=prob.good), col=def$col.good, size=1) +
+									 scale_y_continuous(labels = percent) +
+									 theme_bw() +
+									 theme(text = element_text(size=8), 
+										   axis.title.y = element_text(size=8)) +
+									 xlim(c(0,max.yrs)) +
+									 labs(title="Probability of Employee Termination", 
+										  x="Tenure in Years", 
+										  y="Probability"))
+
+	if (do.annotate) {
+		gglist$fig4 <- gglist$fig4 +
+						annotate("text", 
+								 x=1.75, y=0.7, hjust=0, vjust=1,
+								 color=def$col.good,
+								 label="Good Fit") +
+						annotate("text", 
+							 x=0.5, y=2, hjust=0, vjust=1,
+							 color=def$col.bad,
+							 label="Bad Fit")
+	}
+
+	gglist$fig5 <- suppressWarnings(ggplot(data=dist.year, aes(x=tenure)) + 
+									 geom_vline(xintercept=be.pt, col=def$col.be, size=0.5, linetype="dashed") +
+									 geom_vline(xintercept=be.cume, col=def$col.be.cume, size=0.5, linetype="dashed") +
+									 geom_ribbon(fill=def$col.cost, size=0, aes(ymax=cost,ymin=benefit,alpha=cost>benefit)) + 
+									 scale_alpha_discrete(range=c(0,.25)) + 
+									 theme(legend.position="none") +
+									 geom_line(col=def$col.cost, size=1, aes(y=cost)) + 
+									 geom_line(col=def$col.benefit, size=1, aes(y=benefit)) +
+									 scale_y_continuous(labels = percent) +
+									 theme_bw() +
+									 theme(text = element_text(size=8), 
+										   axis.title.y = element_text(size=8)) +
+									 theme(legend.position="none") +
+									 labs(title="Benefit & Cost of One Employee", 
+										  x="Tenure in Years", 
+										  y="% Potential Value"))
+	if (do.annotate) {
+		gglist$fig5 <- gglist$fig5 +
+						 annotate("text", 
+								  x=1.75, y=1, hjust=0, vjust=-0.2,
+								  color=def$col.benefit,
+								  label="Benefit") +
+						 annotate("text", 
+								  x=1.75, y=0.5, hjust=0, vjust=-0.2,
+								  color=def$col.cost,
+								  label="Cost") +
+						 annotate("text", 
+								  x=be.pt, y=0.1, hjust=-0.1, vjust=0,
+								  color=def$col.be,
+								  label="B/E") +
+						 annotate("text", 
+								  x=be.cume, y=0.1, hjust=-0.1, vjust=0,
+								  color=def$col.be,
+								  label="B/E Cume") 
+	}
+
+	gglist$fig6 <- suppressWarnings(ggplot(data=dist.year, aes(x=tenure)) + 
+									 geom_vline(xintercept=be.pt, col=def$col.be, size=0.5, linetype="dashed") +
+									 geom_vline(xintercept=be.cume, col=def$col.be.cume, size=0.5, linetype="dashed") +
+									 geom_hline(yintercept=0, col=def$col.be.cume, size=0.5, linetype="dotted") +
+									 geom_ribbon(size=0, alpha=0.5, ymin=0,
+												 aes(ymax=(benefit.cume-cost.cume), 
+													 fill=(benefit.cume-cost.cume)>0)) + 
+									 geom_line(size=1, 
+											   aes(y=(benefit.cume-cost.cume),
+												   col=(benefit.cume-cost.cume)>0)) +
+									 scale_y_continuous(labels = percent) +
+									 scale_fill_manual(values=c(def$col.cost, def$col.benefit)) +
+									 scale_color_manual(values=c(def$col.cost, def$col.benefit)) +
+									 theme_bw() +
+									 theme(text = element_text(size=8), 
+										   axis.title.y = element_text(size=8)) +
+									 theme(legend.position="none") +
+									 xlim(c(0,max.yrs)) +
+									 labs(title="Cumulative Net Benefit", 
+										  x="Tenure in Years", 
+										  y="Cumulative Net Benefit"))
+	if (do.annotate) {
+		gglist$fig6 <- gglist$fig6 +
+						 annotate("text", 
+								  x=2, y=-0.1, hjust=0.5, vjust=0,
+								  color=def$col.benefit,
+								  label="Net Benefit") +
+						 annotate("text", 
+								  x=0.3, y=0.1, hjust=0.5, vjust=1,
+								  color=def$col.cost,
+								  label="Net Cost") +
+						 annotate("text", 
+								  x=be.pt, y=0.90, hjust=-0.1, vjust=0,
+								  color=def$col.be,
+								  label="B/E") +
+						 annotate("text", 
+								  x=be.cume, y=0.90, hjust=-0.1, vjust=0,
+								  color=def$col.be,
+								  label="B/E Cume")
+	}
+
+	gglist$fig7 <- suppressWarnings(ggplot(data=dist.year, aes(x=tenure)) + 
+									 geom_vline(xintercept=be.pt, col=def$col.be, size=0.5, linetype="dashed") +
+									 geom_vline(xintercept=be.cume, col=def$col.be.cume, size=0.5, linetype="dashed") +
+									 geom_hline(yintercept=0, col=def$col.be.cume, size=0.5, linetype="dotted") +
+									 geom_ribbon(fill=def$col.bad, size=0, alpha=0.5, ymin=0,
+												 aes(ymax=(benefit.cume-cost.cume)*prob.bad.wt)) + 
+									 geom_line(aes(y=(benefit.cume-cost.cume)*prob.bad.wt), col=def$col.bad, size=1) +
+									 geom_ribbon(fill=def$col.good, size=0, alpha=0.5, ymin=0,
+												 aes(ymax=(benefit.cume-cost.cume)*prob.good.wt)) + 
+									 geom_line(aes(y=(benefit.cume-cost.cume)*prob.good.wt), col=def$col.good, size=1) +
+									 annotate("text", 
+											  x=1.5, y=-0.1, hjust=0, vjust=0,
+											  size=4,
+											  color=ifelse(evh<0,def$col.cost,def$col.benefit),
+											  label=sprintf("EVH = %.1f%%",evh*100)) +
+									 scale_y_continuous(labels = percent) +
+									 theme_bw() +
+									 theme(text = element_text(size=8), 
+										   axis.title.y = element_text(size=8)) +
+									 xlim(c(0,max.yrs)) +
+									 labs(title="Expected Cumulative Net Benefit", 
+										  x="Tenure in Years", 
+										  y="Cumulative Net Benefit\nx Probability"))
+
+	if (do.annotate) {
+		gglist$fig7 <- gglist$fig7 +
+						 annotate("text", 
+								  x=1.5, y=0, hjust=0, vjust=1.5,
+								  color=def$col.good,
+								  label="Good Fit") +
+						 annotate("text", 
+								  x=0.45, y=-0.15, hjust=0, vjust=0,
+								  color=def$col.bad,
+								  label="Bad Fit")
+	}
+
+	fig45 <- arrangeGrob(gglist$fig4, gglist$fig5, main="Employee Tenure, Benefit, and Costs", ncol=1)
+	fig67 <- arrangeGrob(gglist$fig6, gglist$fig7, main="Employee Cumulative Net Benefit", ncol=1)
+	fig4567 <- arrangeGrob(fig45, fig67, ncol=2)
+
+	if (list.plots) {
+		return(gglist)
+	} else {
+		return(fig4567)
+	}
+
 }
 
 # vector-friendly benefit from employee, modeled as a sigmoid function
@@ -140,7 +238,7 @@ empBenefit <- function(tenure, max.benefit) {
 
 # vector friendly cumulative benefit, the integral of empBenefit
 empBenefitCume <- function(tenure, max.benefit) {
-	# use sapply to make integrate is vector-friendly
+	# use sapply to make integrate vector-friendly
 	sapply(tenure, function(x) { integrate(empBenefit, 0, x, 
 										   max.benefit=max.benefit)$value })
 }
@@ -152,7 +250,7 @@ empCost <- function(tenure, cost.ramp, cost.scale, salary) {
 
 # vector friendly cumulative cost, the integral of empCost
 empCostCume <- function(tenure, cost.ramp, cost.scale, salary) {
-	# use sapply to make integrate is vector-friendly
+	# use sapply to make integrate vector-friendly
 	sapply(tenure, function(x) { integrate(empCost, 0, x, 
 										   cost.ramp=cost.ramp, 
 										   cost.scale=cost.scale, 
@@ -178,7 +276,8 @@ empPredNet <- function(tenure,
 empPredNetCume <- function(max.benefit, 
 						   cost.ramp, cost.scale, salary, 
 						   d.shape, d.scale) {
-	integrate(empPredNet, 0, Inf,
+	# hacked the 0.01 instead of 0 here to avoid error on super-high prob low value events
+	integrate(empPredNet, 0.01, Inf,
 			  max.benefit=max.benefit,
 			  cost.ramp=cost.ramp, 
 			  cost.scale=cost.scale, 
@@ -214,6 +313,7 @@ runPredNetCume <- function(max.benefit = def$max.benefit,
 	if (verbose) {
 		writeLines(sprintf("cume.good = %.1f%%, cume.bad = %.1f%%, total = %.1f%%", 
 						   cume.good * 100, cume.bad * 100, cume.total * 100))
+		# TODO: better printout, compare to salary
 	}
 
 	return(cume.total)
@@ -330,42 +430,71 @@ runHistograms <- function(sample=1000,
 						  shape.good = def$shape.good, 
 						  scale.good = def$scale.good, 
 						  shape.bad = def$shape.bad, 
-						  scale.bad = def$scale.bad) {
+						  scale.bad = def$scale.bad,
+						  do.annotate=FALSE,
+						  list.plots=FALSE) {
 
 	good.fit <- rweibull(sample * good.bad.ratio, shape=shape.good, scale=scale.good)
 	bad.fit <- rweibull(sample * (1-good.bad.ratio), shape=shape.bad, scale=scale.bad)
 
-	fig1 <- ggplot(data=data.frame(tenure=c(good.fit, bad.fit)), aes(x=tenure)) + 
-				geom_histogram(binwidth=1/12, fill=def$col.benefit) + 
-				xlim(c(0,3)) +
-				theme_bw() +
-				theme(plot.title = element_text(size = 10),
-					  axis.title = element_text(size = 8)) +
-				labs(title="All Employees", 
-					 x="Tenure in Years", 
-					 y="Count")
+	gglist <- list()
+	gglist$fig1 <- ggplot(data=data.frame(tenure=c(good.fit, bad.fit)), aes(x=tenure)) + 
+					geom_histogram(binwidth=1/12, fill=def$col.benefit) + 
+					xlim(c(0,3)) +
+					theme_bw() +
+					theme(text = element_text(size=8)) +
+					labs(title="All Employees", 
+						 x="Tenure in Years", 
+						 y="Count")
 
-	fig2 <- ggplot(data=data.frame(tenure=good.fit), aes(x=tenure)) + 
-				geom_histogram(binwidth=1/12, fill=def$col.good) + 
-				xlim(c(0,3)) +
-				theme_bw() +
-				theme(plot.title = element_text(size = 10),
-					  axis.title = element_text(size = 8)) +
-				labs(title="'Good Fit' Employees", 
-					 x="Tenure in Years", 
-					 y="Count")
+	gglist$fig2 <- ggplot(data=data.frame(tenure=good.fit), aes(x=tenure)) + 
+					geom_histogram(binwidth=1/12, fill=def$col.good) + 
+					xlim(c(0,3)) +
+					theme_bw() +
+					theme(text = element_text(size=8)) +
+					labs(title="'Good Fit' Employees", 
+						 x="Tenure in Years", 
+						 y="Count")
 
-	fig3 <- ggplot(data=data.frame(tenure=bad.fit), aes(x=tenure)) + 
+	gglist$fig3 <- ggplot(data=data.frame(tenure=bad.fit), aes(x=tenure)) + 
 				geom_histogram(binwidth=1/12, fill=def$col.bad) + 
 				xlim(c(0,3)) +
 				theme_bw() +
-				theme(plot.title = element_text(size = 10),
-					  axis.title = element_text(size = 8)) +
+				theme(text = element_text(size=8)) +
 				labs(title="'Bad Fit' Employees", 
 					 x="Tenure in Years", 
 					 y="Count")
 
-	fig.all <- arrangeGrob(fig1, fig2, fig3, main="Employment Tenure", ncol=1)
+	fig123 <- arrangeGrob(gglist$fig1, gglist$fig2, gglist$fig3, main="Employment Tenure", ncol=1)
 
-	return(fig.all)
+	if (list.plots) {
+		return(gglist)
+	} else {
+		return(fig123)
+	}
+}
+
+runFigures <- function() {
+
+	fig123 <- runHistograms(list.plot=TRUE, do.annotate=TRUE)
+
+	lapply(names(fig123), 
+		   function(x) {
+			   fname <- sprintf("plots/pat002_%s.png",x) 
+			   writeLines(sprintf("writing %s", fname))
+			   ggsave(filename=sprintf("plots/pat002_%s.png",x), 
+							  plot=fig123[[x]],
+							  height=4, width=4,dpi=100)
+		   })
+
+	fig4567 <- runSim202(list.plot=TRUE, do.annotate=TRUE)
+
+	lapply(names(fig4567), 
+		   function(x) {
+			   fname <- sprintf("plots/pat002_%s.png",x) 
+			   writeLines(sprintf("writing %s", fname))
+			   ggsave(filename=fname, plot=fig4567[[x]], height=4, width=4,dpi=100)
+		   })
+
+	return("Done.")
 }
