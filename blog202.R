@@ -65,14 +65,16 @@ runSim202 <- function(max.yrs=def$max.yrs, max.benefit=def$max.benefit,
 	dist.year$prob.good.wt <- dist.year$prob.good * good.bad.ratio
 	dist.year$prob.bad.wt <- dist.year$prob.bad * (1-good.bad.ratio)
 
+	# TODO C: could solve for breakeven point in another way, to handle off-chart cases, 
+	#         but in that case, they would be off the chart.... so who cares.
+
 	# calc breakeven points
-	# TODO C: could solve for breakeven point in another way, to handle off-chart cases, but they would be off the chart.... so who cares.
 	be.pt.id <- which.max(dist.year$benefit - dist.year$cost>0)
 	be.pt <- dist.year$tenure[be.pt.id]
 	be.cume.id <- which.max(dist.year$benefit.cume - dist.year$cost.cume>0)
 	be.cume <- dist.year$tenure[be.cume.id]
 
-	writeLines(sprintf("daily breakeven at %.2f, cume breakeven at %.2f", be.pt, be.cume))
+	writeLines(sprintf("Daily breakeven at %.2f, cume breakeven at %.2f", be.pt, be.cume))
 
 	evh <- runPredNetCume(max.benefit, cost.ramp, cost.scale, salary,
 				  shape.good, scale.good, shape.bad, scale.bad, 
@@ -295,20 +297,21 @@ runPredNetCume <- function(max.benefit = def$max.benefit,
 						  good.bad.ratio = def$good.bad.ratio,
 						  verbose=FALSE) {
 
-	if (FALSE & verbose) {
-		writeLines(sprintf("Sim for max.benefit = %.2f, cost.ramp = %.2f, cost.scale = %.2f, salary = %.2f",
-						   max.benefit, cost.ramp, cost.scale, salary))
-		writeLines(sprintf("  shape.good = %.2f, scale.good = %.2f, shape.bad = %.2f, scale.bad = %.2f",
-						   shape.good, scale.good, shape.bad, scale.bad))
-		writeLines(sprintf("  good.bad.ratio = %.2f", good.bad.ratio))
-	}
+	# if (verbose) {
+	# 	writeLines(sprintf("Sim for max.benefit = %.2f, cost.ramp = %.2f, cost.scale = %.2f, salary = %.2f",
+	# 					   max.benefit, cost.ramp, cost.scale, salary))
+	# 	writeLines(sprintf("  shape.good = %.2f, scale.good = %.2f, shape.bad = %.2f, scale.bad = %.2f",
+	# 					   shape.good, scale.good, shape.bad, scale.bad))
+	# 	writeLines(sprintf("  good.bad.ratio = %.2f", good.bad.ratio))
+	# }
 
-	cume.good <- empPredNetCume(max.benefit, cost.ramp, cost.scale, salary, 
-								shape.good, scale.good) *  good.bad.ratio
-	cume.bad <- empPredNetCume(max.benefit, cost.ramp, cost.scale, salary, 
-							   shape.bad, scale.bad) * (1-good.bad.ratio)
+	cume.good <- empPredNetCume(max.benefit, cost.ramp, cost.scale, salary, shape.good, scale.good)
+	cume.bad <- empPredNetCume(max.benefit, cost.ramp, cost.scale, salary, shape.bad, scale.bad)
 
-	cume.total <- cume.good + cume.bad
+	cume.good.wt <- cume.good * good.bad.ratio 
+	cume.bad.wt <- cume.bad * (1-good.bad.ratio)
+
+	cume.total <- cume.good.wt + cume.bad.wt
 
 	if (verbose) {
 		writeLines(sprintf("cume.good = %.1f%%, cume.bad = %.1f%%, total = %.1f%%", 
