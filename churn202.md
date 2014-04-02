@@ -6,7 +6,7 @@ If you are impatient and just want to play with the graphs, you might want to ju
 
 - `source("churn202.R")` 
 - `manipSim202()`
-- Read more in the [interactive model](#inter) section.
+- Read more in the [interactive model](#running-the-interactive-simulation) section.
 
 ### Libraries and Loading The Program
 As before, this program uses the fairly common `ggplot2`, `gridExtra`, and `scales` libraries.
@@ -69,7 +69,6 @@ Note the parameters to change the sample size, annotation, graph grobbing, and m
 
 ![Figure3][]
 
-<a id="static"></a>
 ### Running the Static Simulation
 
 To output the four plots describing the static model at the default values, run `runSim202()` .
@@ -108,12 +107,11 @@ These mean what they say:
 - The overall EVH - our objective function
 
 
-<a id="inter"></a>
 ### Running the Interactive Simulation
 
 To output the four plots with fancy sliders, using RStudio, run `manipSim202()`.
 If you don't see the slider controls, click on the little gear in the graph area.
-The output is exactly as in the [static model](#static), (in fact you will see that the program just runs the static model with new parameters), so please refer to that section for tips on modifying the output.
+The output is exactly as in the [static model](#running-the-static-simulation), (in fact you will see that the program just runs the static model with new parameters), so please refer to that section for tips on modifying the output.
 
 As with the static model, text is output with every run.
 This way you have a running log of model results as you experiment.
