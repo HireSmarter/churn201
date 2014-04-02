@@ -18,14 +18,14 @@ If you want to create a U-shaped cost curve, go ahead.
 #### >> [GitHub for Churn 201][github201] *(86 lines of code)*
 - Build plots
 - Modify employee cost/benefit models.
-- Based on PA Times Article: [Churn 201][churn201]: Calculating Employee Value (2/20/2013)
+- Based on PA Times Article: [Churn 201: Calculating Employee Value][churn201] (2/20/2013)
 
 
 #### >> [GitHub for Churn 202][github202] *(503 lines of code)*
 - Run interactive simulation of hiring costs
 - Calculate `Expected Value of Hiring`
 - Preview of sensitivity study
-- Based on PA Times Article: [Churn 202][churn202]: Good and Bad Churn (4/1/2013)
+- Based on PA Times Article: [Churn 202: Good and Bad Churn][churn202] (4/1/2013)
 
 #### GitHub for Churn 203: Sensitivity Analysis and Experiment design
 *(coming up)*
