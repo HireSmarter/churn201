@@ -3,16 +3,6 @@
 The Predictive Analytics Times has been kind enough to publish a series articles by [Talent Analytics'][ta] Chief Scientist, [Pasha Roberts][pasha].
 The articles focus is entirely on business and quantitative issues that impact **Employee Attrition**.
 
-The primary articles are:
-
-- [Churn 201][churn201]: Calculating Employee Value (2/20/2013)
-- [Churn 202][churn202]: Good and Bad Churn (4/1/2013)
-- Churn 203: Sensitivity Analysis and Experiment design *(upcoming)*
-- Churn 204: Survival analysis for employee attrition *(upcoming)*
-- Churn 205: Uplift modeling and intervention - what is the employee analogy to "Sleeping Dogs" and "Persuadables" in marketing churn? *(upcoming)*
-- Churn 206: Variables, time windows, analytical methods and black boxes *(upcoming)*
-- Churn 207: Using cost information to tune models - are false negatives or false positives more expensive? *(upcoming)*
-
 An online blog can only go so far, technically.
 So to foster conversation and learning, including learning by us, we are putting more content here on GitHub.
 We believe that GitHub is an important and useful platform for collaboration between data researchers, enabling direct sharing of code, data, ideas, and results.
@@ -23,15 +13,38 @@ We have put this code, currently over 500 lines of R, online so that other resea
 If you don't like our Weibull distributions, you can swap in a Log-Logit or whatever you want.
 If you want to create a U-shaped cost curve, go ahead.
 
-Each article has its own supporting article and code:
+### Table Of Contents
 
-- [GitHub for Churn 201][github201] *(86 lines of code)*
-	- Build plots
-	- Modify employee cost/benefit models.
-- [GitHub for Churn 202][github202] *(503 lines of code)*
-	- Run interactive simulation of hiring costs
-	- Calculate `Expected Value of Hiring`
-	- Preview of sensitivity study
+#### [GitHub for Churn 201][github201] *(86 lines of code)*
+- Build plots
+- Modify employee cost/benefit models.
+- Based on PA Times Article: [Churn 201][churn201]: Calculating Employee Value (2/20/2013)
+
+
+#### [GitHub for Churn 202][github202] *(503 lines of code)*
+- Run interactive simulation of hiring costs
+- Calculate `Expected Value of Hiring`
+- Preview of sensitivity study
+- Based on PA Times Article: [Churn 202][churn202]: Good and Bad Churn (4/1/2013)
+
+#### GitHub for Churn 203: Sensitivity Analysis and Experiment design
+*(coming up)*
+
+#### GitHub for Churn 204: Survival analysis for employee attrition
+*(coming up)*
+
+#### GitHub for  Churn 205: Uplift modeling and intervention
+What is the employee analogy to "Sleeping Dogs" and "Persuadables" in marketing churn?
+
+*(coming up)*
+
+#### GitHub for - Churn 206: Variables, time windows, analytical methods and black boxes
+*(coming up)*
+
+#### GitHub for Churn 207: Using cost information to tune models
+Are false negatives or false positives more expensive?
+
+*(coming up)*
 
 ### Using GitHub
 
