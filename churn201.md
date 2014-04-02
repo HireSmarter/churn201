@@ -68,7 +68,7 @@ Also, you can see here two plots that did not make it in to the paper:
 
 ![Figure3][]
 
-
+> Copyright &copy; 2014, Talent Analytics, Corp.
 
 [patimes]: http://www.predictiveanalyticsworld.com/patimes/employee-churn-201-calculating-employee-value/
 [ta]: http://www.talentanalytics.com

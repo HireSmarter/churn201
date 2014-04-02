@@ -83,6 +83,7 @@ Running the code is easy:
 
 As new blog articles come out, we will publish additional code to support the new ideas.
 
+> Copyright &copy; 2014, Talent Analytics, Corp.
 
 [ta]: http://www.talentanalytics.com
 [pasha]: https://twitter.com/pasharoberts
