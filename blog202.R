@@ -313,8 +313,12 @@ runPredNetCume <- function(max.benefit = def$max.benefit,
 	cume.total <- cume.good.wt + cume.bad.wt
 
 	if (verbose) {
-		writeLines(sprintf("cume.good = %.1f%%, cume.bad = %.1f%%, total = %.1f%%", 
-						   cume.good * 100, cume.bad * 100, cume.total * 100))
+		writeLines(sprintf("Good Fit: %.1f%% net benefit * %.1f weight = %.1f overall contribution",
+						   cume.good * 100, good.bad.ratio * 100, cume.good.wt * 100))
+		writeLines(sprintf("Bad Fit: %.1f%% net benefit * %.1f weight = %.1f overall contribution",
+						   cume.bad * 100, (1-good.bad.ratio) * 100, cume.bad.wt * 100))
+		writeLines(sprintf("Overall EVH = %.1f%%", cume.total * 100))
+
 		# TODO: better printout, compare to salary
 	}
 
