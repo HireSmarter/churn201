@@ -4,7 +4,7 @@ Welcome to the GitHub outpost of the recent Predictive Analytics Times ["Churn 2
 
 If you are impatient and just want to play with the graphs, you might want to just load the program in RStudio and go:
 
-- `source("blog202.R")` 
+- `source("churn202.R")` 
 - `manipSim202()`
 - Read more in the [interactive model](#inter) section.
 
@@ -14,7 +14,7 @@ To enable live interaction in the `manipSim202()` function, the system uses the 
 [Manipulate][manip] is an interesting, cross-platform, powerful way to easily add sliders and other controls to R programs.
 My main criticism is that it doesn't smoothly update the way that D3 does, but see below for my thoughts on issues with bringing this to the web.
 
-To load the program, type `source("blog202.R")` .
+To load the program, type `source("churn202.R")` .
 If it works, it will say nothing, but you'll see code load into the variables section in the top right panel.
 
 ### Changing Defaults

@@ -56,7 +56,7 @@ Welcome to the new world!
 
 If you are on GitHub, you just use git to "clone" a copy of the Churn 201 project to your local system.
 Barring that, you can simply click on the "Zip" icon to the right.
-You can even download the individual `blog201.R` and `blog202.R` files directly from the file manager above.
+You can even download the individual `churn201.R` and `churn202.R` files directly from the file manager above.
 
 Once you have the files, let's say you have created an innovative new cost curve or dynamic system that you'd like to share.
 Or, maybe you found a bug and want to send your fix.
@@ -81,7 +81,7 @@ Running the code is easy:
 - Open R, R Studio, or whatever R platform you use.
 - Set the working directory to your downloaded/cloned directory with `setwd("/run/dir/name")` 
 - Load the libraries and program with `source`
-	- `source()` the relevant program, such as `source("blog201.R")` or `source("blog202.R")`.
+	- `source()` the relevant program, such as `source("churn201.R")` or `source("churn202.R")`.
 	- This commands loads the relevant libraries and programs into memory.
 	- Success is silent, but in RStudio you will see objects load into the top right panel.
 - If you are missing libraries, you will need to install some packages.
