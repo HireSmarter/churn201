@@ -60,7 +60,7 @@ There are free libraries for almost anything one would ever want to do, and it i
 We tend to treat R more like a statistically aware, vector-friendly programming language, than a pretty GUI system or graphing package.
 
 The programs in this GitHub can be run either directly [from the console][rproject], or in the free and powerful [RStudio][rstudio], or likely on other platforms such as [RCommander][rcommander].
-My personal preference is to use the console; but some may call it austere.
+My personal preference is to use the console, but many users will want something more visual.
 The interactive, slider-based model in [Churn 202][github202] does use the "manipulate" libraries that are only found in RStudio.
 
 Running the code is easy:
