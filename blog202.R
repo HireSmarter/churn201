@@ -7,7 +7,6 @@ gpal <- scales::hue_pal(h = c(0, 360) + 15, c = 100, l = 65, h.start = 0, direct
 
 # set up my defaults in a global list
 def <- list()
-def$max.yrs <- 3
 def$max.benefit <- 0.5
 def$cost.ramp <- 3.5
 def$cost.scale <- 2
