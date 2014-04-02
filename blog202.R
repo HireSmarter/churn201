@@ -313,9 +313,9 @@ runPredNetCume <- function(max.benefit = def$max.benefit,
 	cume.total <- cume.good.wt + cume.bad.wt
 
 	if (verbose) {
-		writeLines(sprintf("Good Fit: %.1f%% net benefit * %.1f weight = %.1f overall contribution",
+		writeLines(sprintf("Good Fit: %.1f%% net benefit * %.0f%% weight = %.1f%% overall contribution",
 						   cume.good * 100, good.bad.ratio * 100, cume.good.wt * 100))
-		writeLines(sprintf("Bad Fit: %.1f%% net benefit * %.1f weight = %.1f overall contribution",
+		writeLines(sprintf("Bad Fit: %.1f%% net benefit * %.0f%% weight = %.1f%% overall contribution",
 						   cume.bad * 100, (1-good.bad.ratio) * 100, cume.bad.wt * 100))
 		writeLines(sprintf("Overall EVH = %.1f%%", cume.total * 100))
 
@@ -331,7 +331,7 @@ runSensitivityTests <- function() {
 	writeLines("Running Sensitivity Tests")
 
 	# modify good.bad.ratio from 0-1 from base of 0.3
-	writeLines(sprintf("  good.bad.ratio:\t1%% change from %.2f results in %.2f%% change in ENCB",
+	writeLines(sprintf("  good.bad.ratio:\t1%% change from %.2f results in %.2f%% change in EVH",
 					   def$good.bad.ratio, 
 					   (runPredNetCume(good.bad.ratio=def$good.bad.ratio*1.01) / 
 						runPredNetCume() - 1) * 100 ))
@@ -340,7 +340,7 @@ runSensitivityTests <- function() {
 							 sapply(z.in, function(x) {runPredNetCume(good.bad.ratio=x)}))
 
 	# modify shape.good from 1-5 from base of 2.5 
-	writeLines(sprintf("  shape.good:\t1%% change from %.2f results in %.2f%% change in ENCB",
+	writeLines(sprintf("  shape.good:\t1%% change from %.2f results in %.2f%% change in EVH",
 					   def$shape.good, 
 					   (runPredNetCume(shape.good=def$shape.good*1.01) / 
 						runPredNetCume() - 1) * 100 ))
@@ -349,7 +349,7 @@ runSensitivityTests <- function() {
 							 sapply(z.in, function(x) {runPredNetCume(shape.good=x)}))
 
 	# modify scale.good from 0.01-5 from base of 1.5 
-	writeLines(sprintf("  scale.good:\t1%% change from %.2f results in %.2f%% change in ENCB",
+	writeLines(sprintf("  scale.good:\t1%% change from %.2f results in %.2f%% change in EVH",
 					   def$scale.good, 
 					   (runPredNetCume(scale.good=def$scale.good*1.01) / 
 						runPredNetCume() - 1) * 100 ))
@@ -358,7 +358,7 @@ runSensitivityTests <- function() {
 							 sapply(z.in, function(x) {runPredNetCume(scale.good=x)}))
 
 	# modify shape.bad from 1-5 from base of 1.66 
-	writeLines(sprintf("  shape.bad:\t1%% change from %.2f results in %.2f%% change in ENCB",
+	writeLines(sprintf("  shape.bad:\t1%% change from %.2f results in %.2f%% change in EVH",
 					   def$shape.bad, 
 					   (runPredNetCume(shape.bad=def$shape.bad*1.01) / 
 						runPredNetCume() - 1) * 100 ))
@@ -367,7 +367,7 @@ runSensitivityTests <- function() {
 							 sapply(z.in, function(x) {runPredNetCume(shape.bad=x)}))
 
 	# modify scale.bad from 0.01-5 from base of 0.33 
-	writeLines(sprintf("  scale.bad:\t1%% change from %.2f results in %.2f%% change in ENCB",
+	writeLines(sprintf("  scale.bad:\t1%% change from %.2f results in %.2f%% change in EVH",
 					   def$scale.bad, 
 					   (runPredNetCume(scale.bad=def$scale.bad*1.01) / 
 						runPredNetCume() - 1) * 100 ))
@@ -376,7 +376,7 @@ runSensitivityTests <- function() {
 							 sapply(z.in, function(x) {runPredNetCume(scale.bad=x)}))
 
 	# modify max.benefit from 0.25-3, initial = 0.5
-	writeLines(sprintf("  max.benefit:\t1%% change from %.2f results in %.2f%% change in ENCB",
+	writeLines(sprintf("  max.benefit:\t1%% change from %.2f results in %.2f%% change in EVH",
 					   def$max.benefit, 
 					   (runPredNetCume(max.benefit=def$max.benefit*1.01) / 
 						runPredNetCume() - 1) * 100 ))
@@ -385,7 +385,7 @@ runSensitivityTests <- function() {
 							 sapply(z.in, function(x) {runPredNetCume(max.benefit=x)}))
 
 	# modify cost.ramp from 0.5-5 from base of 3.5 
-	writeLines(sprintf("  cost.ramp:\t1%% change from %.2f results in %.2f%% change in ENCB",
+	writeLines(sprintf("  cost.ramp:\t1%% change from %.2f results in %.2f%% change in EVH",
 					   def$cost.ramp, 
 					   (runPredNetCume(cost.ramp=def$cost.ramp*1.01) / 
 						runPredNetCume() - 1) * 100 ))
@@ -394,7 +394,7 @@ runSensitivityTests <- function() {
 							 sapply(z.in, function(x) {runPredNetCume(cost.ramp=x)}))
 
 	# modify cost.scale from 0.5-5 from base of 2 
-	writeLines(sprintf("  cost.scale:\t1%% change from %.2f results in %.2f%% change in ENCB",
+	writeLines(sprintf("  cost.scale:\t1%% change from %.2f results in %.2f%% change in EVH",
 					   def$cost.scale, 
 					   (runPredNetCume(cost.scale=def$cost.scale*1.01) / 
 						runPredNetCume() - 1) * 100 ))
@@ -403,7 +403,7 @@ runSensitivityTests <- function() {
 							 sapply(z.in, function(x) {runPredNetCume(cost.scale=x)}))
 
 	# modify salary from 0-1 from base of 0.5
-	writeLines(sprintf("  salary:\t1%% change from %.2f results in %.2f%% change in ENCB",
+	writeLines(sprintf("  salary:\t1%% change from %.2f results in %.2f%% change in EVH",
 					   def$salary, 
 					   (runPredNetCume(salary=def$salary*1.01) / 
 						runPredNetCume() - 1) * 100 ))

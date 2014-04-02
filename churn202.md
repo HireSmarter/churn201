@@ -6,7 +6,7 @@ If you are impatient and just want to play with the graphs, you might want to ju
 
 - `source("blog202.R")` 
 - `manipSim202()`
-- Read more in the [interactive model][#inter] section.
+- Read more in the [interactive model](#inter) section.
 
 ### Libraries and Loading The Program
 As before, this program uses the fairly common `ggplot2`, `gridExtra`, and `scales` libraries.
@@ -69,6 +69,7 @@ Note the parameters to change the sample size, annotation, graph grobbing, and m
 
 ![Figure3][]
 
+<a id="static"></a>
 ### Running the Static Simulation
 
 To output the four plots describing the static model at the default values, run `runSim202()` .
@@ -82,6 +83,19 @@ The plots are:
 
 Note the parameters to change the sample size, annotation, graph grobbing, and more.
 
+Every time the model is run, it prints text to the console, such as:
+
+	Daily breakeven at 0.28, cume breakeven at 0.76
+	Good Fit: 48.1% net benefit * 60% weight = 28.8% overall contribution
+	Bad Fit: -17.0% net benefit * 40% weight = -6.8% overall contribution
+	Overall EVH = 22.0%
+
+These mean what they say: 
+
+- The year marks at which daily and cumulative breakeven is made
+- The net benefit of "good fit" and "bad fit" populations, times their weights
+- The overall EVH - our objective function
+
 ![Figure4][]
 
 ![Figure5][]
@@ -93,26 +107,55 @@ Note the parameters to change the sample size, annotation, graph grobbing, and m
 <a id="inter"></a>
 ### Running the Interactive Simulation
 
-manipSim202() to run the 3-part graph with interactive sliders that change most everything in the simulation. Unfortunately I haven’t labeled all of them in english yet so until that window dressing is done, you can guess, ask me, or read the code… You can see what happens so it’s not hard to figure out.
+To output the four plots with fancy sliders, using RStudio, run `manipSim202()`.
+If you don't see the slider controls, click on the little gear in the graph area.
+The output is exactly as in the [static model](#static), (in fact you will see that the program just runs the static model with new parameters), so please refer to that section for tips on modifying the output.
 
-The main plot has three sections:
+As with the static model, text is output with every run.
+This way you have a running log of model results as you experiment.
 
-The “quantitative scissors” from churn201 article.
-You can manipulate this with max.benefit, cost.ramp, cost.scale and salary
-A plot showing the probability of termination, across tenure, for two groups of employees:
-Orange is bad fit. They largely leave within a year. You can manipulate this with shape.bad and scale.bad.
-Blue is good fit. They stick around for 1-2 years. You can manipulate this with ‘shape.goodand 'scale.good.
-The bottom plot shows how the cumulative costs stack up for good+bad. The sum of the shaded area is your probability-weighted average employee net benefit. You can change the mix of good and bad employees with good.bad.ratio.
 ### Web-Based Interactive Simulation
 
+We are looking at options to put this up on the web, with one of the reactive web visualization platforms.
+Normally we would look at a simpler, snazzier platform like D3, but as you can see in the code there are some rather hairy numeric integrations involved.
+Maybe we leave the EVH calculation aside and show the graphs with D3?
+
+To use R directly, it looks like we could easily wrap this in Shiny, a R-based webvis platform.
+We're still figuring it out, but it isn't done yet.
+Maybe by the time we get to Churn 204.
+Please let us know if you have any ideas.
+
 ### Calculating EVH
-enough of these graphs, give me the numbers
+If you just want numbers, and none of these heavy graphs, no problem.
+From the command line, use `runPredNetCume()` to return the EVH value, overriding any of the defaults for the specific parameters that you want.
+
+	> runPredNetCume(good.bad.ratio=0.2)
+	[1] -0.03978231
+
+To get the verbose output, specify `verbose=TRUE`:
+
+	> runPredNetCume(verbose=TRUE)
+	Good Fit: 48.1% net benefit * 60% weight = 28.8% overall contribution
+	Bad Fit: -17.0% net benefit * 40% weight = -6.8% overall contribution
+	Overall EVH = 22.0%
+	[1] 0.2204147
+
+	> runPredNetCume(verbose=TRUE, good.bad.ratio=0.8)
+	Good Fit: 48.1% net benefit * 80% weight = 38.4% overall contribution
+	Bad Fit: -17.0% net benefit * 20% weight = -3.4% overall contribution
+	Overall EVH = 35.1%
+	[1] 0.3505133
+
 
 ### Secret Preview: Sensitivity
 
->takes the simulation at the defaults set up in the code, and manipulates one variable at a time, to see what happens when you move that variable alone. It says that the main leverage points in the system are the mix of good/bad employees at the entry point, or to reduce salary. The latter has problems and side effects. Anyway It may be too wonky to show in detail in the article, but it’s the most powerful part of the analysis. Curious if this seems too wonky to you, or if you feel your CIO would look at you like you have three heads if you try showing him that…
+I tend to write this kind of article by writing programs and numbers first, then the text.
+In this case, the EVH concept took me well over the normal word count already, therefore some concepts will be for next article, Churn 203.
 
-runSensitivityTests() takes the simulation at the defaults set up in the code, and manipulates one variable at a time, to see what happens when you move that variable alone. It says that the main leverage points in the system are the mix of good/bad employees at the entry point, or to reduce salary. The latter has problems and side effects. Anyway It may be too wonky to show in detail in the article, but it’s the most powerful part of the analysis. Curious if this seems too wonky to you, or if you feel your CIO would look at you like you have three heads if you try showing him that…
+One concept, which was already programmed, was sensitivity analysis.
+I'll leave it as an exercise to the reader to run `runSensitivityTests()`, or to just wait until next month.
+All I can say, is that computing power has sure come a long way since I was putting punched cards into the mainframe; this is pretty amazing.
+
 
 
 > Copyright &copy; 2014, Talent Analytics, Corp.  All Rights Reserved.
