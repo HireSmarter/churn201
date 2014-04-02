@@ -28,7 +28,7 @@ Or, change the variable during runtime.
 - `max.benefit` = year at which employee benefit reaches 100% (default 0.5)
 - `cost.ramp` = slope of cost function (default 3.5)
 - `cost.scale` = size of initial cost function (default 2)
-- `salary` = level of employee salary (default 50%)
+- `salary` = level of employee salary (default 0.5)
 
 #### Distribution Variables:
 
@@ -76,12 +76,23 @@ To output the four plots describing the static model at the default values, run 
 This does not require RStudio.
 The plots are:
 
-- Figure 4 shows the above Weibull distributions as configured by `shape.good`, `scale.good`, `shape.bad`, and `scale.bad`.  Orange is "bad fit," and Blue is "good fit."
-- Figure 5 shows the benefit-cost curve and cutoff lines, as derived in Churn 201, and configured by `max.benefit`, `cost.ramp`, `cost.scale`, and `salary`.  These are the "quantitative scissors."
-- Figure 6 shows the Cumulative Net Benefit curve and cutoff lines, as configured by `max.benefit`, `cost.ramp`, `cost.scale`, and `salary`.
-- Figure 7 shows the Expected Cumulative Net Benefit curves for "good fit" and "bad fit", plus the value of the EVH in text.  These curves and EVH are derived from all above variables as well as `good.bad.ratio`.
+![Figure4][]
 
-Note the parameters to change the sample size, annotation, graph grobbing, and more.
+Figure 4 shows the above Weibull distributions as configured by `shape.good`, `scale.good`, `shape.bad`, and `scale.bad`.  Orange is "bad fit," and Blue is "good fit."
+
+![Figure5][]
+
+Figure 5 shows the benefit-cost curve and cutoff lines, as derived in Churn 201, and configured by `max.benefit`, `cost.ramp`, `cost.scale`, and `salary`.  These are the "quantitative scissors."
+
+![Figure6][]
+
+Figure 6 shows the Cumulative Net Benefit curve and cutoff lines, as configured by `max.benefit`, `cost.ramp`, `cost.scale`, and `salary`.
+
+![Figure7][]
+
+Figure 7 shows the Expected Cumulative Net Benefit curves for "good fit" and "bad fit", plus the value of the EVH in text.  These curves and EVH are derived from all above variables as well as `good.bad.ratio`.
+
+Note the other parameters to change annotation, graph grobbing, and more.
 
 Every time the model is run, it prints text to the console, such as:
 
@@ -96,13 +107,6 @@ These mean what they say:
 - The net benefit of "good fit" and "bad fit" populations, times their weights
 - The overall EVH - our objective function
 
-![Figure4][]
-
-![Figure5][]
-
-![Figure6][]
-
-![Figure7][]
 
 <a id="inter"></a>
 ### Running the Interactive Simulation
@@ -117,10 +121,11 @@ This way you have a running log of model results as you experiment.
 ### Web-Based Interactive Simulation
 
 We are looking at options to put this up on the web, with one of the reactive web visualization platforms.
-Normally we would look at a simpler, snazzier platform like D3, but as you can see in the code there are some rather hairy numeric integrations involved.
+Normally we would look at a simpler, snazzier platform like D3, but as you can see in the code there are some rather intense numeric integrations involved.
 Maybe we leave the EVH calculation aside and show the graphs with D3?
 
 To use R directly, it looks like we could easily wrap this in Shiny, a R-based webvis platform.
+But, that needs a special host with some restrictions and expensive proprietary software.
 We're still figuring it out, but it isn't done yet.
 Maybe by the time we get to Churn 204.
 Please let us know if you have any ideas.
@@ -150,13 +155,17 @@ To get the verbose output, specify `verbose=TRUE`:
 ### Secret Preview: Sensitivity
 
 I tend to write this kind of article by writing programs and numbers first, then the text.
-In this case, the EVH concept took me well over the normal word count already, therefore some concepts will be for next article, Churn 203.
+In this case, the EVH concept took me well over the normal word count, therefore we threw some concepts overboard until next month.
 
-One concept, which was already programmed, was sensitivity analysis.
+One concept, already programmed, was sensitivity analysis.
 I'll leave it as an exercise to the reader to run `runSensitivityTests()`, or to just wait until next month.
 All I can say, is that computing power has sure come a long way since I was putting punched cards into the mainframe; this is pretty amazing.
 
 
+### Feedback
+
+As before, I encourage the community to engage with us on GitHub - comment, make issues, send pull requests.
+We do find this of great value, and hope that we can connect with others who do so as well.
 
 > Copyright &copy; 2014, Talent Analytics, Corp.  All Rights Reserved.
 
