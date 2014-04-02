@@ -35,27 +35,27 @@ Each article has its own supporting article and code:
 
 ### Using GitHub
 
-Git is a non-proprietary source control system, entirely separate from GitHub.
-GitHub is more like a de facto central breeding ground for thousands of open software projects.
+[Git][git] is a non-proprietary source control system, entirely separate from GitHub.
+*GitHub* is more like a de facto central breeding ground for thousands of open software projects.
 The best way to use the system is to [join and engage][joingh].
 It's free, but there is some SSL configuration to use it properly.
 Welcome to the new world!
 
 If you are on GitHub, you just use git to "clone" a copy of the Churn 201 project to your local system.
-Barring that, you can simply [download a zip file][churnzip] of the programs, or click on the "Zip" icon to the right.
-You can even download the individual [blog201.R][file201] and [blog202.R][file202] files directly from the file manager above.
+Barring that, you can simply click on the "Zip" icon to the right.
+You can even download the individual `blog201.R` and `blog202.R` files directly from the file manager above.
 
 Once you have the files, let's say you have created an innovative new cost curve or dynamic system that you'd like to share.
 Or, maybe you found a bug and want to send your fix.
 You can share your these changes back to us with a ["pull request"][pullreq].
 Or, you could "fork" your own variant of the project.
-If you find a bug, create an "issue." 
+If you find a bug, create an ["issue."][issues] 
 
 Keep us posted and engage!
 
 ### Using R
 
-R is an open-source, free statistical platform that has taken the data science community by storm.
+[R][rproject] is an open-source, free statistical platform that has taken the data science community by storm.
 There are free libraries for almost anything one would ever want to do, and it is increasingly seen as the reference platform for most work in this domain.
 We tend to treat R more like a statistically aware, vector-friendly programming language, than a pretty GUI system or graphing package.
 
@@ -66,15 +66,15 @@ The interactive, slider-based model in [Churn 202][github202] does use the "mani
 Running the code is easy:
 
 - Open R, R Studio, or whatever R platform you use.
-- Set the working directory to your downloaded/cloned directory
+- Set the working directory to your downloaded/cloned directory with `setwd("/run/dir/name")` 
 - Load the libraries and program with `source`
-	- `source` the relevant program, such as `source("blog201.R")` or `source("blog202.R")`.
+	- `source()` the relevant program, such as `source("blog201.R")` or `source("blog202.R")`.
 	- This commands loads the relevant libraries and programs into memory.
-	- Success is silent, but in RStudio you will see objects loading into the top right panel.
+	- Success is silent, but in RStudio you will see objects load into the top right panel.
 - If you are missing libraries, you will need to install some packages.
 	- For example, Churn202 uses the following packages: `ggplot2`, `gridExtra`, `scales`, and `manipulate`. 
-	- In RStudio, you can use the Tools&gt;Install Libraries menu, or find the same option on the lower right panel.
-	- From the console, you simply run install.packages().
+	- In RStudio, use the Tools&gt;Install Libraries menu, or find the same option on the lower right panel.
+	- From the console, simply run `install.packages()`.
 - Follow the instructions on the companion page, [Churn 201][github201] or [Churn 202][github202]:
 	- Run short commands as noted
 	- Explore, view, modify objects
@@ -98,9 +98,7 @@ As new blog articles come out, we will publish additional code to support the ne
 [rstudio]: http://www.rstudio.com/
 [rcommander]: http://socserv.mcmaster.ca/jfox/Misc/Rcmdr/
 
+[git]: http://git-scm.com/
 [joingh]: https://github.com/join
-[churnzip]: https://github.com/talentanalytics/churn201/archive/master.zip
-[file201]: https://github.com/talentanalytics/churn201/blob/master/blog201.R
-[file202]: https://github.com/talentanalytics/churn201/blob/master/blog202.R
 [pullreq]: https://github.com/talentanalytics/churn201/pulls
 [issues]: https://github.com/talentanalytics/churn201/issues
