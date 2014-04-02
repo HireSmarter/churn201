@@ -68,43 +68,13 @@ Also, you can see here two plots that did not make it in to the paper:
 
 ![Figure3][]
 
-### Future Topics
-
-Future blogs, and code, will address:
-
-- Differentiating "good" and "bad" churn
-- Variables, time windows, analytical methods and black boxes
-- Survival analysis
-- Intervention and uplift modeling - what is the employee analogy to "Sleeping Dogs" and "Persuadables" in [marketing churn][mktchurn]?
-- Using cost information to tune models - are false negatives or false positives more expensive?
-
-### Using R
-
-To use this code, either download the single `blog001.R` file, or use the `Download ZIP` button, or best of all, use git to clone the project.
-Running the code is easy, if you are familiar with R:
-
-- Open R, R Studio, or whatever R platform you use.
-- Set the working directory to your downloaded/cloned directory
-- `source(blog001.R)` to run the numbers, based on the hardcoded values.
-- Display the graph by printing `fig1`
-- To change assumptions, edit the program and repeat.
-
-This is designed to be short and simple, so there are no fancy sliders or D3 visualizations... yet.
-As new blog articles come out, we will publish additional code to support the new ideas.
-
-### Submitting Updates
-
-We do encourage experimentation, and you are welcome to present useful ["pull requests"][pullreq] or ["issues"][issues] to this project to make it better.
-
 
 
 [patimes]: http://www.predictiveanalyticsworld.com/patimes/employee-churn-201-calculating-employee-value/
 [ta]: http://www.talentanalytics.com
 [sigmoid]: http://en.wikipedia.org/wiki/Sigmoid_function
 [gompertz]: http://en.wikipedia.org/wiki/Gompertz_curve
-[mktchurn]: http://stochasticsolutions.com/pdf/SavedAndDrivenAway.pdf
-[pullreq]: https://github.com/talentanalytics/churn201/pulls
-[issues]: https://github.com/talentanalytics/churn201/issues 
+
 [Figure1]: plots/pat201_fig1.png "Figure 1: Monthly Cost & Benefit from One Employee"
 [Figure2]: plots/pat201_fig2.png "Figure 2: Net Monthly Benefit from One Employee"
 [Figure3]: plots/pat201_fig3.png "Figure 3: Cumulative Benefit from One Employee"
