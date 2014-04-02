@@ -1,6 +1,6 @@
 ## Employee Churn 201: Calculating Employee Value
 
-Welcome to the GitHub outpost of the [recent Predictive Analytics Times article][patimes] by Pasha Roberts from [Talent Analytics][ta].
+Welcome to the GitHub outpost of the recent Predictive Analytics Times ["Churn 201" article][patimes] by Pasha Roberts from [Talent Analytics][ta].
 
 Our goal here is to foster conversation and learning, including learning by us.
 
@@ -68,7 +68,7 @@ Also, you can see here two plots that did not make it in to the paper:
 
 ![Figure3][]
 
-> Copyright &copy; 2014, Talent Analytics, Corp.
+> Copyright &copy; 2014, Talent Analytics, Corp.  All Rights Reserved.
 
 [patimes]: http://www.predictiveanalyticsworld.com/patimes/employee-churn-201-calculating-employee-value/
 [ta]: http://www.talentanalytics.com
