@@ -167,7 +167,7 @@ We do find this of great value, and hope that we can connect with others who do 
 
 > Copyright &copy; 2014, Talent Analytics, Corp.  All Rights Reserved.
 
-[patimes]: http://www.predictiveanalyticsworld.com/patimes/employee-churn-201-calculating-employee-value/
+[patimes]: http://www.predictiveanalyticsworld.com/patimes/employee-churn-202-good-bad-churn/
 [ta]: http://www.talentanalytics.com
 
 [manip]: http://www.rstudio.com/ide/docs/advanced/manipulate
