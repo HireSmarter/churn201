@@ -7,16 +7,16 @@ gpal <- scales::hue_pal(h = c(0, 360) + 15, c = 100, l = 65, h.start = 0, direct
 
 # set up my defaults in a global list
 def <- list()
-def$max.benefit <- 0.5
-def$cost.ramp <- 3.5
+def$max.benefit <- 1.5
+def$cost.ramp <- 1.5
 def$cost.scale <- 2
 def$salary <- 0.5
 def$shape.good <- 2.5
-def$scale.good <- 1.5
+def$scale.good <- 2.5
 def$shape.bad <- 1.66
-def$scale.bad <- 0.33
+def$scale.bad <- 0.63
 def$good.bad.ratio <- 0.6
-def$max.yrs <- 3
+def$max.yrs <- 4
 def$col.benefit <- gpal[3]	# dark green
 def$col.cost <- gpal[1]		# salmon
 def$col.good <- gpal[5]		# blue-grey
@@ -126,11 +126,11 @@ runSim202 <- function(max.yrs=def$max.yrs, max.benefit=def$max.benefit,
 	if (do.annotate) {
 		gglist$fig5 <- gglist$fig5 +
 						 annotate("text", 
-								  x=1.75, y=1, hjust=0, vjust=-0.2,
+								  x=2.5, y=1, hjust=0, vjust=-0.2,
 								  color=def$col.benefit,
 								  label="Benefit") +
 						 annotate("text", 
-								  x=1.75, y=0.5, hjust=0, vjust=-0.2,
+								  x=2.5, y=0.5, hjust=0, vjust=-0.2,
 								  color=def$col.cost,
 								  label="Cost") +
 						 annotate("text", 
@@ -167,11 +167,11 @@ runSim202 <- function(max.yrs=def$max.yrs, max.benefit=def$max.benefit,
 	if (do.annotate) {
 		gglist$fig6 <- gglist$fig6 +
 						 annotate("text", 
-								  x=2, y=-0.1, hjust=0.5, vjust=0,
+								  x=3, y=-0.1, hjust=0.5, vjust=0,
 								  color=def$col.benefit,
 								  label="Net Benefit") +
 						 annotate("text", 
-								  x=0.3, y=0.1, hjust=0.5, vjust=1,
+								  x=1, y=0.1, hjust=0.5, vjust=1,
 								  color=def$col.cost,
 								  label="Net Cost") +
 						 annotate("text", 
@@ -503,4 +503,94 @@ runFigures <- function() {
 		   })
 
 	return("Done.")
+}
+
+gen.timeline <- function(emp=150) {
+	days <- def$max.yrs*365
+	target <- 2014.2
+
+	d.t <- data.frame(id=1:emp)
+
+	# fake hire date
+	d.t$hire <- sample(days, emp, replace=TRUE)/365 + 2010
+	# fake tenure from weibulls
+	d.t$tenure.yrs <- c(rweibull(def$good.bad.ratio * emp, shape=def$shape.good, scale=def$scale.good),
+						rweibull((1-def$good.bad.ratio) * emp, shape=def$shape.bad, scale=def$scale.bad))
+	d.t$tenure.yrs <- sapply(d.t$tenure.yrs, function(x) { max(0.1,x)})
+	# fake emp.type
+	d.t$emp.type <- factor(ifelse(d.t$id <= def$good.bad.ratio * emp,"group.a","group.b"))
+	# fake term date
+	d.t$term <- d.t$hire + d.t$tenure.yrs
+	# is.term
+	d.t$is.term <- d.t$term <= target
+	# term.class
+	d.t$term.class <- factor(ifelse(d.t$is.term, "already.term", "still.working"))
+
+	return(d.t)
+}
+
+# fig2 <- ggplot(d.timeline,
+# 		   aes(x=hire, xmin=hire, xmax=term, y=id, col=term.class)) + 
+# 		geom_errorbarh(height=3, size=0.65) + 
+# 		scale_color_hue(name="term.class") +
+# 		geom_vline(xintercept=2014.2,col="red", size=0.65, linetype="dashed") +
+# 		annotate("text", 
+# 				 x= 2014.2 + 0.02, 
+# 				 y= 0, 
+# 				 size=4,
+# 				 color="Red",
+# 				 label="Today",
+# 				 hjust=0, vjust=1) +
+# 		scale_x_continuous(limits=c(2010,2016)) +
+# 		labs(x="Hire Date", y="Employees") +
+# 		theme_bw() + 
+# 		theme(legend.position="bottom",
+# 			  axis.ticks.y=element_blank(),
+# 			  axis.text.y=element_blank())
+
+
+# fig3 <- ggplot(d.timeline,
+# 		   aes(x=tenure.yrs, xmin=0, xmax=tenure.yrs,
+# 			   y=id, col=term.class)) + 
+# 		geom_errorbarh(height=5, size=0.65) + 
+# 		scale_color_hue(name="term.class") +
+# 		geom_vline(xintercept=be.pt,col="Blue", size=0.65, linetype="dashed") +
+# 		annotate("text", 
+# 				 x= be.pt + 0.02, 
+# 				 y= 0, 
+# 				 size=4,
+# 				 color="Blue",
+# 				 label="Monthly B/E",
+# 				 hjust=0, vjust=1) +
+# 		geom_vline(xintercept=be.cume,col="DarkGreen", size=0.65, linetype="dashed") +
+# 		annotate("text", 
+# 				 x= be.cume + 0.02, 
+# 				 y= 0, 
+# 				 size=4,
+# 				 color="DarkGreen",
+# 				 label="Cumulative B/E",
+# 				 hjust=0, vjust=1) +
+# 		scale_x_continuous() +
+# 		labs(x="Years Tenure", y="Employees") +
+# 		theme_bw() + 
+# 		theme(legend.position="bottom",
+# 			  axis.ticks.y=element_blank(),
+# 			  axis.text.y=element_blank())
+# png("paw_3.png", height=72*6, width=72*9)
+# print(fig3)
+# dev.off()
+
+
+twoBars <- function(var.a, val.a, var.b, val.b) {
+	d.g <- data.frame(rbind(c(var.a, val.a), c(var.b, val.b)))
+	names(d.g) <- c("variable", "value")
+	d.g$variable <- factor(d.g$variable, levels=c(var.a, var.b))
+	d.g$value <- as.numeric(levels(d.g$value)[as.numeric(d.g$value)])
+
+	ggplot(d.g, aes(x=variable, y=value, fill=variable, col=variable)) +
+	geom_bar(stat="identity") +
+	scale_y_continuous(labels = percent) +
+	labs(x="Analysis Results", y="Percent") +
+	theme_bw() +
+	theme(legend.position="none") 
 }
