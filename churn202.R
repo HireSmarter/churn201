@@ -58,7 +58,7 @@ runSim202 <- function(max.yrs=def$max.yrs, max.benefit=def$max.benefit,
 	dist.year <- calc.dist(max.yrs, max.benefit, cost.ramp, cost.scale, salary,
 					  shape.good, scale.good, shape.bad, scale.bad, good.bad.ratio)
 
-	break.even <- calc.breakeven(dist.year)
+	break.even <- calcBreakeven(dist.year)
 
 	evh <- runPredNetCume(max.benefit, cost.ramp, cost.scale, salary,
 				  shape.good, scale.good, shape.bad, scale.bad, 
@@ -77,7 +77,7 @@ runSim202 <- function(max.yrs=def$max.yrs, max.benefit=def$max.benefit,
 
 }
 
-gen.timeline <- function(emp=150) {
+genTimeline <- function(emp=150) {
 	days <- def$max.yrs*365
 	target <- 2014.2
 
@@ -97,11 +97,12 @@ gen.timeline <- function(emp=150) {
 	d.t$is.term <- d.t$term <= target
 	# term.class
 	d.t$term.class <- factor(ifelse(d.t$is.term, "already.term", "still.working"))
-
+	# randomized order 0-1
+	d.t$randex <- sample(nrow(d.t),nrow(d.t)) / nrow(d.t)
 	return(d.t)
 }
 
-calc.dist <- function(max.yrs=def$max.yrs, max.benefit=def$max.benefit, 
+calcDist <- function(max.yrs=def$max.yrs, max.benefit=def$max.benefit, 
 					  cost.ramp=def$cost.ramp, cost.scale=def$cost.scale, salary=def$salary,
 					  shape.good=def$shape.good, scale.good=def$scale.good, 
 					  shape.bad=def$shape.bad, scale.bad=def$scale.bad, 
@@ -122,7 +123,7 @@ calc.dist <- function(max.yrs=def$max.yrs, max.benefit=def$max.benefit,
 	return(dist.year)
 }
 
-calc.breakeven <- function(dist.year) {
+calcBreakeven <- function(dist.year) {
 	# calc breakeven points
 	# TODO C: could solve for breakeven point in another way, to handle off-chart cases, 
 	#         but in that case, they would be off the chart.... so who cares.
@@ -225,7 +226,7 @@ runPredNetCume <- function(max.benefit = def$max.benefit,
 						   cume.bad * 100, (1-good.bad.ratio) * 100, cume.bad.wt * 100))
 		writeLines(sprintf("Overall EVH = %.1f%%", cume.total * 100))
 
-		# TODO: better printout, compare to salary
+		# TODO C: better printout, compare to salary
 	}
 
 	return(cume.total)
@@ -346,6 +347,21 @@ g.cumeValue <- function(dist.year, break.even, max.yrs=def$max.yrs, do.annotate=
 	return(zg)
 }
 
+g.cumeValueTimeline <- function(dist.year, break.even, time.line, max.yrs=def$max.yrs, do.annotate=FALSE) {
+
+	zg <- suppressWarnings(
+		  g.cumeValue(dist.year, break.even, max.yrs, do.annotate) +
+
+		geom_errorbarh(data=time.line, height=0.03, size=0.4, col="steelblue",
+					   aes(x=tenure.yrs, 
+						   xmin=0, 
+						   xmax=tenure.yrs, 
+						   y=randex)) +
+		labs(main="few"))
+
+	return(zg)
+}
+
 g.expCume <- function(dist.year, break.even, evh, max.yrs=def$max.yrs, do.annotate=FALSE) {
 
 	zg <- suppressWarnings(
@@ -384,6 +400,34 @@ g.expCume <- function(dist.year, break.even, evh, max.yrs=def$max.yrs, do.annota
 						  color=def$col.bad,
 						  label="Bad Fit")
 	}
+	return(zg)
+}
+
+g.timeline <- function(d.timeline) {
+
+	zg <- suppressWarnings(
+		ggplot(d.timeline,
+			   aes(x=hire, 
+				   xmin=hire, 
+				   xmax=term, 
+				   y=randex, 
+				   col=term.class)) + 
+		   geom_errorbarh(height=0.02, size=0.6) + 
+		   scale_color_hue(name="term.class") +
+		   geom_vline(xintercept=2014.2,col="red", size=0.65, linetype="dashed") +
+		   annotate("text", 
+					x= 2014.2 + 0.02, 
+					y= 0, 
+					size=4,
+					color="Red",
+					label="Today",
+					hjust=0, vjust=1) +
+		   scale_x_continuous(limits=c(2010,2016)) +
+		   labs(x="Hire Date", y="Employees") +
+		   theme_bw() + 
+		   theme(legend.position="bottom",
+				 axis.ticks.y=element_blank(),
+				 axis.text.y=element_blank()))
 	return(zg)
 }
 
@@ -444,8 +488,8 @@ runFigures <- function() {
 	# 	   })
 
 	# calc with defaults
-	dist.year <- calc.dist()
-	break.even <- calc.breakeven(dist.year)
+	dist.year <- calcDist()
+	break.even <- calcBreakeven(dist.year)
 	evh <- runPredNetCume()
 
 	ggsave("plots/pat003_prob_term.png", 
@@ -460,62 +504,26 @@ runFigures <- function() {
 	ggsave("plots/pat003_exp_cume.png", 
 		   g.expCume(dist.year, break.even, evh, do.annotate=TRUE),
 		   height=6.75, width=6, dpi=100)
+
+	timeline.small <- genTimeline(100)
+	ggsave("plots/pat003_cume_time.png", 
+		   g.cumeValueTimeline(dist.year, break.even, timeline.small),
+		   height=6.75, width=6, dpi=100)
+
+	timeline.big <- genTimeline(200)
+	ggsave("plots/pat003_time_line.png", 
+		   g.timeline(timeline.big),
+		   height=6.75, width=6, dpi=100)
+
+	# TODO A: histogram, surv curve
+	# TODO A: multi surv curve with breakeven
+
 }
 
-# TODO: cumsum
-# TODO: plot with arrows
-# TODO: timeline
-# TODO: histogram, surv curve
-# TODO: multi surv curve with breakeven
+# TODO B: cumsum
 
 
-# fig2 <- ggplot(d.timeline,
-# 		   aes(x=hire, xmin=hire, xmax=term, y=id, col=term.class)) + 
-# 		geom_errorbarh(height=3, size=0.65) + 
-# 		scale_color_hue(name="term.class") +
-# 		geom_vline(xintercept=2014.2,col="red", size=0.65, linetype="dashed") +
-# 		annotate("text", 
-# 				 x= 2014.2 + 0.02, 
-# 				 y= 0, 
-# 				 size=4,
-# 				 color="Red",
-# 				 label="Today",
-# 				 hjust=0, vjust=1) +
-# 		scale_x_continuous(limits=c(2010,2016)) +
-# 		labs(x="Hire Date", y="Employees") +
-# 		theme_bw() + 
-# 		theme(legend.position="bottom",
-# 			  axis.ticks.y=element_blank(),
-# 			  axis.text.y=element_blank())
 
-
-# fig3 <- ggplot(d.timeline,
-# 		   aes(x=tenure.yrs, xmin=0, xmax=tenure.yrs,
-# 			   y=id, col=term.class)) + 
-# 		geom_errorbarh(height=5, size=0.65) + 
-# 		scale_color_hue(name="term.class") +
-# 		geom_vline(xintercept=be.pt,col="Blue", size=0.65, linetype="dashed") +
-# 		annotate("text", 
-# 				 x= be.pt + 0.02, 
-# 				 y= 0, 
-# 				 size=4,
-# 				 color="Blue",
-# 				 label="Monthly B/E",
-# 				 hjust=0, vjust=1) +
-# 		geom_vline(xintercept=be.cume,col="DarkGreen", size=0.65, linetype="dashed") +
-# 		annotate("text", 
-# 				 x= be.cume + 0.02, 
-# 				 y= 0, 
-# 				 size=4,
-# 				 color="DarkGreen",
-# 				 label="Cumulative B/E",
-# 				 hjust=0, vjust=1) +
-# 		scale_x_continuous() +
-# 		labs(x="Years Tenure", y="Employees") +
-# 		theme_bw() + 
-# 		theme(legend.position="bottom",
-# 			  axis.ticks.y=element_blank(),
-# 			  axis.text.y=element_blank())
 
 runSensitivityTests <- function() {
 	# modify one variable through its range to calc sensitivity
