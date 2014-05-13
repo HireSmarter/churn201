@@ -29,8 +29,8 @@ setDefaults <- function() {
 	return(def) 
 }
 
-# run the sim with manipulators
 manipSim202 <- function() {
+	# run the sim with manipulators
 	manipulate(runSim202(max.yrs, max.benefit, 
 						 cost.ramp, cost.scale, salary,
 						 shape.good, scale.good, shape.bad, scale.bad, 
@@ -47,13 +47,13 @@ manipSim202 <- function() {
 			   max.yrs = slider(1, 8, initial=def$max.yrs))
 }
 
-# run the sim, return the plots and print out cume info
 runSim202 <- function(max.yrs=def$max.yrs, max.benefit=def$max.benefit, 
 					  cost.ramp=def$cost.ramp, cost.scale=def$cost.scale, salary=def$salary,
 					  shape.good=def$shape.good, scale.good=def$scale.good, 
 					  shape.bad=def$shape.bad, scale.bad=def$scale.bad, 
 					  good.bad.ratio=def$good.bad.ratio,
 					  do.annotate=FALSE) {
+	# run the sim, return the plots and print out cume info
 
 	dist.year <- calc.dist(max.yrs, max.benefit, cost.ramp, cost.scale, salary,
 					  shape.good, scale.good, shape.bad, scale.bad, good.bad.ratio)
@@ -67,7 +67,7 @@ runSim202 <- function(max.yrs=def$max.yrs, max.benefit=def$max.benefit,
 	fig4 <- g.probTerm(dist.year, break.even, max.yrs, do.annotate)
 	fig5 <- g.costBenefit(dist.year, break.even, max.yrs, do.annotate)
 	fig6 <- g.cumeValue(dist.year, break.even, max.yrs, do.annotate)
-	fig7 <- g.expCume(dist.year, break.even, max.yrs, evh, do.annotate)
+	fig7 <- g.expCume(dist.year, break.even, evh, max.yrs, do.annotate)
 
 	fig45 <- arrangeGrob(fig4, fig5, main="Employee Tenure, Benefit, and Costs", ncol=1)
 	fig67 <- arrangeGrob(fig6, fig7, main="Employee Cumulative Net Benefit", ncol=1)
@@ -77,7 +77,161 @@ runSim202 <- function(max.yrs=def$max.yrs, max.benefit=def$max.benefit,
 
 }
 
-g.probTerm <- function(dist.year, break.even, max.yrs, do.annotate=FALSE) {
+gen.timeline <- function(emp=150) {
+	days <- def$max.yrs*365
+	target <- 2014.2
+
+	d.t <- data.frame(id=1:emp)
+
+	# fake hire date
+	d.t$hire <- sample(days, emp, replace=TRUE)/365 + 2010
+	# fake tenure from weibulls
+	d.t$tenure.yrs <- c(rweibull(def$good.bad.ratio * emp, shape=def$shape.good, scale=def$scale.good),
+						rweibull((1-def$good.bad.ratio) * emp, shape=def$shape.bad, scale=def$scale.bad))
+	d.t$tenure.yrs <- sapply(d.t$tenure.yrs, function(x) { max(0.1,x)})
+	# fake emp.type
+	d.t$emp.type <- factor(ifelse(d.t$id <= def$good.bad.ratio * emp,"group.a","group.b"))
+	# fake term date
+	d.t$term <- d.t$hire + d.t$tenure.yrs
+	# is.term
+	d.t$is.term <- d.t$term <= target
+	# term.class
+	d.t$term.class <- factor(ifelse(d.t$is.term, "already.term", "still.working"))
+
+	return(d.t)
+}
+
+calc.dist <- function(max.yrs=def$max.yrs, max.benefit=def$max.benefit, 
+					  cost.ramp=def$cost.ramp, cost.scale=def$cost.scale, salary=def$salary,
+					  shape.good=def$shape.good, scale.good=def$scale.good, 
+					  shape.bad=def$shape.bad, scale.bad=def$scale.bad, 
+					  good.bad.ratio=def$good.bad.ratio) {
+	
+	# divide our years uniformly, 100 pts a year
+	dist.year <- as.data.frame( 0:(max.yrs*100)/100 )
+	names(dist.year) <- "tenure"
+	dist.year$benefit <- empBenefit(dist.year$tenure, max.benefit)
+	dist.year$benefit.cume <- empBenefitCume(dist.year$tenure, max.benefit)
+	dist.year$cost <- empCost(dist.year$tenure, cost.ramp, cost.scale, salary)
+	dist.year$cost.cume <- empCostCume(dist.year$tenure, cost.ramp, cost.scale, salary)
+	dist.year$prob.good <- dweibull(dist.year$tenure, shape=shape.good, scale=scale.good)
+	dist.year$prob.bad <- dweibull(dist.year$tenure, shape=shape.bad, scale=scale.bad)
+	dist.year$prob.good.wt <- dist.year$prob.good * good.bad.ratio
+	dist.year$prob.bad.wt <- dist.year$prob.bad * (1-good.bad.ratio)
+
+	return(dist.year)
+}
+
+calc.breakeven <- function(dist.year) {
+	# calc breakeven points
+	# TODO C: could solve for breakeven point in another way, to handle off-chart cases, 
+	#         but in that case, they would be off the chart.... so who cares.
+
+	break.even <- list()
+	break.even$pt.id <- which.max(dist.year$benefit - dist.year$cost > 0)
+	break.even$pt <- dist.year$tenure[break.even$pt.id]
+	break.even$cume.id <- which.max(dist.year$benefit.cume - dist.year$cost.cume > 0)
+	break.even$cume <- dist.year$tenure[break.even$cume.id]
+
+	writeLines(sprintf("Daily breakeven at %.2f, cume breakeven at %.2f", 
+					   break.even$pt, break.even$cume))
+	return(break.even)
+}
+
+empBenefit <- function(tenure, max.benefit) {
+	# vector-friendly benefit from employee, modeled as a sigmoid function
+	1/(1+exp(-(tenure/max.benefit*12-6)))
+}
+
+empBenefitCume <- function(tenure, max.benefit) {
+	# vector friendly cumulative benefit, the integral of empBenefit
+	# use sapply to make integrate vector-friendly
+	sapply(tenure, function(x) { integrate(empBenefit, 0, x, 
+										   max.benefit=max.benefit)$value })
+}
+
+empCost <- function(tenure, cost.ramp, cost.scale, salary) {
+	# vector-friendly cost of employee, modeled as a gompertz function
+	exp(-exp(cost.ramp * tenure)) * cost.scale + salary
+}
+
+empCostCume <- function(tenure, cost.ramp, cost.scale, salary) {
+	# vector friendly cumulative cost, the integral of empCost
+	# use sapply to make integrate vector-friendly
+	sapply(tenure, function(x) { integrate(empCost, 0, x, 
+										   cost.ramp=cost.ramp, 
+										   cost.scale=cost.scale, 
+										   salary=salary)$value })
+}
+
+empPredNet <- function(tenure, 
+					   max.yrs, max.benefit, 
+					   cost.ramp, cost.scale, salary,
+					   d.shape, d.scale) {
+	# one function for one tenure moment, for use by empPredNetCume and graphing
+
+	# net = benefit - cost
+	z.net <- empBenefit(tenure, max.benefit) - empCost(tenure, cost.ramp, cost.scale, salary)
+
+	# weighted by probability of that tenure position
+	z.prob <- dweibull(tenure, shape=d.shape, scale=d.scale)
+
+	return(z.net * z.prob)
+}
+
+empPredNetCume <- function(max.benefit, 
+						   cost.ramp, cost.scale, salary, 
+						   d.shape, d.scale) {
+	# the sum of all net benefits given these settings
+	# hacked the 0.01 instead of 0 here to avoid error on super-high prob low value events
+	integrate(empPredNet, 0.01, Inf,
+			  max.benefit=max.benefit,
+			  cost.ramp=cost.ramp, 
+			  cost.scale=cost.scale, 
+			  salary=salary,
+			  d.shape=d.shape,
+			  d.scale=d.scale
+			  )$value
+}
+
+runPredNetCume <- function(max.benefit = def$max.benefit, 
+						  cost.ramp = def$cost.ramp, cost.scale = def$cost.scale, salary = def$salary,
+						  shape.good = def$shape.good, scale.good = def$scale.good, 
+						  shape.bad = def$shape.bad, scale.bad = def$scale.bad,
+						  good.bad.ratio = def$good.bad.ratio,
+						  verbose=FALSE) {
+	# run the sim for just the cume value, maybe print out values, return cume
+
+	# if (verbose) {
+	# 	writeLines(sprintf("Sim for max.benefit = %.2f, cost.ramp = %.2f, cost.scale = %.2f, salary = %.2f",
+	# 					   max.benefit, cost.ramp, cost.scale, salary))
+	# 	writeLines(sprintf("  shape.good = %.2f, scale.good = %.2f, shape.bad = %.2f, scale.bad = %.2f",
+	# 					   shape.good, scale.good, shape.bad, scale.bad))
+	# 	writeLines(sprintf("  good.bad.ratio = %.2f", good.bad.ratio))
+	# }
+
+	cume.good <- empPredNetCume(max.benefit, cost.ramp, cost.scale, salary, shape.good, scale.good)
+	cume.bad <- empPredNetCume(max.benefit, cost.ramp, cost.scale, salary, shape.bad, scale.bad)
+
+	cume.good.wt <- cume.good * good.bad.ratio 
+	cume.bad.wt <- cume.bad * (1-good.bad.ratio)
+
+	cume.total <- cume.good.wt + cume.bad.wt
+
+	if (verbose) {
+		writeLines(sprintf("Good Fit: %.1f%% net benefit * %.0f%% weight = %.1f%% overall contribution",
+						   cume.good * 100, good.bad.ratio * 100, cume.good.wt * 100))
+		writeLines(sprintf("Bad Fit: %.1f%% net benefit * %.0f%% weight = %.1f%% overall contribution",
+						   cume.bad * 100, (1-good.bad.ratio) * 100, cume.bad.wt * 100))
+		writeLines(sprintf("Overall EVH = %.1f%%", cume.total * 100))
+
+		# TODO: better printout, compare to salary
+	}
+
+	return(cume.total)
+}
+
+g.probTerm <- function(dist.year, break.even, max.yrs=def$max.yrs, do.annotate=FALSE) {
 	zg <- suppressWarnings(
 			ggplot(data=dist.year, aes(x=tenure)) + 
 			geom_vline(xintercept=break.even$pt, col=def$col.be, size=0.5, linetype="dashed") +
@@ -106,7 +260,7 @@ g.probTerm <- function(dist.year, break.even, max.yrs, do.annotate=FALSE) {
 	return(zg)
 }
 
-g.costBenefit <- function(dist.year, break.even, max.yrs, do.annotate=FALSE) {
+g.costBenefit <- function(dist.year, break.even, max.yrs=def$max.yrs, do.annotate=FALSE) {
 	zg <- suppressWarnings(
 			ggplot(data=dist.year, aes(x=tenure)) + 
 			geom_vline(xintercept=break.even$pt, col=def$col.be, size=0.5, linetype="dashed") +
@@ -146,7 +300,7 @@ g.costBenefit <- function(dist.year, break.even, max.yrs, do.annotate=FALSE) {
 	return(zg)
 }
 
-g.cumeValue <- function(dist.year, break.even, max.yrs, do.annotate=FALSE) {
+g.cumeValue <- function(dist.year, break.even, max.yrs=def$max.yrs, do.annotate=FALSE) {
 
 	zg <- suppressWarnings(
 			ggplot(data=dist.year, aes(x=tenure)) + 
@@ -192,7 +346,7 @@ g.cumeValue <- function(dist.year, break.even, max.yrs, do.annotate=FALSE) {
 	return(zg)
 }
 
-g.expCume <- function(dist.year, break.even, max.yrs, evh, do.annotate=FALSE) {
+g.expCume <- function(dist.year, break.even, evh, max.yrs=def$max.yrs, do.annotate=FALSE) {
 
 	zg <- suppressWarnings(
 			   ggplot(data=dist.year, aes(x=tenure)) + 
@@ -233,102 +387,139 @@ g.expCume <- function(dist.year, break.even, max.yrs, evh, do.annotate=FALSE) {
 	return(zg)
 }
 
-# vector-friendly benefit from employee, modeled as a sigmoid function
-empBenefit <- function(tenure, max.benefit) {
-	1/(1+exp(-(tenure/max.benefit*12-6)))
+runHistograms <- function(sample=1000,
+						  good.bad.ratio = def$good.bad.ratio, 
+						  shape.good = def$shape.good, 
+						  scale.good = def$scale.good, 
+						  shape.bad = def$shape.bad, 
+						  scale.bad = def$scale.bad,
+						  do.annotate=FALSE) {
+
+	good.fit <- rweibull(sample * good.bad.ratio, shape=shape.good, scale=scale.good)
+	bad.fit <- rweibull(sample * (1-good.bad.ratio), shape=shape.bad, scale=scale.bad)
+
+	fig1 <- ggplot(data=data.frame(tenure=c(good.fit, bad.fit)), aes(x=tenure)) + 
+					geom_histogram(binwidth=1/12, fill=def$col.benefit) + 
+					xlim(c(0,3)) +
+					theme_bw() +
+					theme(text = element_text(size=8)) +
+					labs(title="All Employees", 
+						 x="Tenure in Years", 
+						 y="Count")
+
+	fig2 <- ggplot(data=data.frame(tenure=good.fit), aes(x=tenure)) + 
+					geom_histogram(binwidth=1/12, fill=def$col.good) + 
+					xlim(c(0,3)) +
+					theme_bw() +
+					theme(text = element_text(size=8)) +
+					labs(title="'Good Fit' Employees", 
+						 x="Tenure in Years", 
+						 y="Count")
+
+	fig3 <- ggplot(data=data.frame(tenure=bad.fit), aes(x=tenure)) + 
+				geom_histogram(binwidth=1/12, fill=def$col.bad) + 
+				xlim(c(0,3)) +
+				theme_bw() +
+				theme(text = element_text(size=8)) +
+				labs(title="'Bad Fit' Employees", 
+					 x="Tenure in Years", 
+					 y="Count")
+
+	fig123 <- arrangeGrob(fig1, fig2, fig3, main="Employment Tenure", ncol=1)
+
+	return(fig123)
 }
 
-# vector friendly cumulative benefit, the integral of empBenefit
-empBenefitCume <- function(tenure, max.benefit) {
-	# use sapply to make integrate vector-friendly
-	sapply(tenure, function(x) { integrate(empBenefit, 0, x, 
-										   max.benefit=max.benefit)$value })
+runFigures <- function() {
+
+	# fig123 <- runHistograms(list.plot=TRUE, do.annotate=TRUE)
+
+	# lapply(names(fig123), 
+	# 	   function(x) {
+	# 		   fname <- sprintf("plots/pat002_%s.png",x) 
+	# 		   writeLines(sprintf("writing %s", fname))
+	# 		   ggsave(filename=sprintf("plots/pat002_%s.png",x), 
+	# 						  plot=fig123[[x]],
+	# 						  height=4, width=4,dpi=100)
+	# 	   })
+
+	# calc with defaults
+	dist.year <- calc.dist()
+	break.even <- calc.breakeven(dist.year)
+	evh <- runPredNetCume()
+
+	ggsave("plots/pat003_prob_term.png", 
+		   g.probTerm(dist.year, break.even, do.annotate=TRUE), 
+		   height=6.75, width=6, dpi=100)
+	ggsave("plots/pat003_cost_benefit.png", 
+		   g.costBenefit(dist.year, break.even, do.annotate=TRUE),
+		   height=6.75, width=6, dpi=100)
+	ggsave("plots/pat003_cume_value.png", 
+		   g.cumeValue(dist.year, break.even, do.annotate=TRUE),
+		   height=6.75, width=6, dpi=100)
+	ggsave("plots/pat003_exp_cume.png", 
+		   g.expCume(dist.year, break.even, evh, do.annotate=TRUE),
+		   height=6.75, width=6, dpi=100)
 }
 
-# vector-friendly cost of employee, modeled as a gompertz function
-empCost <- function(tenure, cost.ramp, cost.scale, salary) {
-	exp(-exp(cost.ramp * tenure)) * cost.scale + salary
-}
+# TODO: cumsum
+# TODO: plot with arrows
+# TODO: timeline
+# TODO: histogram, surv curve
+# TODO: multi surv curve with breakeven
 
-# vector friendly cumulative cost, the integral of empCost
-empCostCume <- function(tenure, cost.ramp, cost.scale, salary) {
-	# use sapply to make integrate vector-friendly
-	sapply(tenure, function(x) { integrate(empCost, 0, x, 
-										   cost.ramp=cost.ramp, 
-										   cost.scale=cost.scale, 
-										   salary=salary)$value })
-}
 
-# one function for one tenure moment, for use by empPredNetCume and graphing
-empPredNet <- function(tenure, 
-					   max.yrs, max.benefit, 
-					   cost.ramp, cost.scale, salary,
-					   d.shape, d.scale) {
+# fig2 <- ggplot(d.timeline,
+# 		   aes(x=hire, xmin=hire, xmax=term, y=id, col=term.class)) + 
+# 		geom_errorbarh(height=3, size=0.65) + 
+# 		scale_color_hue(name="term.class") +
+# 		geom_vline(xintercept=2014.2,col="red", size=0.65, linetype="dashed") +
+# 		annotate("text", 
+# 				 x= 2014.2 + 0.02, 
+# 				 y= 0, 
+# 				 size=4,
+# 				 color="Red",
+# 				 label="Today",
+# 				 hjust=0, vjust=1) +
+# 		scale_x_continuous(limits=c(2010,2016)) +
+# 		labs(x="Hire Date", y="Employees") +
+# 		theme_bw() + 
+# 		theme(legend.position="bottom",
+# 			  axis.ticks.y=element_blank(),
+# 			  axis.text.y=element_blank())
 
-	# net = benefit - cost
-	z.net <- empBenefit(tenure, max.benefit) - empCost(tenure, cost.ramp, cost.scale, salary)
 
-	# weighted by probability of that tenure position
-	z.prob <- dweibull(tenure, shape=d.shape, scale=d.scale)
+# fig3 <- ggplot(d.timeline,
+# 		   aes(x=tenure.yrs, xmin=0, xmax=tenure.yrs,
+# 			   y=id, col=term.class)) + 
+# 		geom_errorbarh(height=5, size=0.65) + 
+# 		scale_color_hue(name="term.class") +
+# 		geom_vline(xintercept=be.pt,col="Blue", size=0.65, linetype="dashed") +
+# 		annotate("text", 
+# 				 x= be.pt + 0.02, 
+# 				 y= 0, 
+# 				 size=4,
+# 				 color="Blue",
+# 				 label="Monthly B/E",
+# 				 hjust=0, vjust=1) +
+# 		geom_vline(xintercept=be.cume,col="DarkGreen", size=0.65, linetype="dashed") +
+# 		annotate("text", 
+# 				 x= be.cume + 0.02, 
+# 				 y= 0, 
+# 				 size=4,
+# 				 color="DarkGreen",
+# 				 label="Cumulative B/E",
+# 				 hjust=0, vjust=1) +
+# 		scale_x_continuous() +
+# 		labs(x="Years Tenure", y="Employees") +
+# 		theme_bw() + 
+# 		theme(legend.position="bottom",
+# 			  axis.ticks.y=element_blank(),
+# 			  axis.text.y=element_blank())
 
-	return(z.net * z.prob)
-}
-
-# the sum of all net benefits given these settings
-empPredNetCume <- function(max.benefit, 
-						   cost.ramp, cost.scale, salary, 
-						   d.shape, d.scale) {
-	# hacked the 0.01 instead of 0 here to avoid error on super-high prob low value events
-	integrate(empPredNet, 0.01, Inf,
-			  max.benefit=max.benefit,
-			  cost.ramp=cost.ramp, 
-			  cost.scale=cost.scale, 
-			  salary=salary,
-			  d.shape=d.shape,
-			  d.scale=d.scale
-			  )$value
-}
-
-# run the sim for just the cume value, maybe print out values, return cume
-runPredNetCume <- function(max.benefit = def$max.benefit, 
-						  cost.ramp = def$cost.ramp, cost.scale = def$cost.scale, salary = def$salary,
-						  shape.good = def$shape.good, scale.good = def$scale.good, 
-						  shape.bad = def$shape.bad, scale.bad = def$scale.bad,
-						  good.bad.ratio = def$good.bad.ratio,
-						  verbose=FALSE) {
-
-	# if (verbose) {
-	# 	writeLines(sprintf("Sim for max.benefit = %.2f, cost.ramp = %.2f, cost.scale = %.2f, salary = %.2f",
-	# 					   max.benefit, cost.ramp, cost.scale, salary))
-	# 	writeLines(sprintf("  shape.good = %.2f, scale.good = %.2f, shape.bad = %.2f, scale.bad = %.2f",
-	# 					   shape.good, scale.good, shape.bad, scale.bad))
-	# 	writeLines(sprintf("  good.bad.ratio = %.2f", good.bad.ratio))
-	# }
-
-	cume.good <- empPredNetCume(max.benefit, cost.ramp, cost.scale, salary, shape.good, scale.good)
-	cume.bad <- empPredNetCume(max.benefit, cost.ramp, cost.scale, salary, shape.bad, scale.bad)
-
-	cume.good.wt <- cume.good * good.bad.ratio 
-	cume.bad.wt <- cume.bad * (1-good.bad.ratio)
-
-	cume.total <- cume.good.wt + cume.bad.wt
-
-	if (verbose) {
-		writeLines(sprintf("Good Fit: %.1f%% net benefit * %.0f%% weight = %.1f%% overall contribution",
-						   cume.good * 100, good.bad.ratio * 100, cume.good.wt * 100))
-		writeLines(sprintf("Bad Fit: %.1f%% net benefit * %.0f%% weight = %.1f%% overall contribution",
-						   cume.bad * 100, (1-good.bad.ratio) * 100, cume.bad.wt * 100))
-		writeLines(sprintf("Overall EVH = %.1f%%", cume.total * 100))
-
-		# TODO: better printout, compare to salary
-	}
-
-	return(cume.total)
-}
-
-# modify one variable through its range to calc sensitivity
-# limited analysis - just based on the "reasonable" starting point
 runSensitivityTests <- function() {
+	# modify one variable through its range to calc sensitivity
+	# limited analysis - just based on the "reasonable" starting point
 	writeLines("Running Sensitivity Tests")
 
 	# modify good.bad.ratio from 0-1 from base of 0.3
@@ -432,191 +623,8 @@ sensitivityPlot <- function(label, def.value, input, output) {
 	return(zg)
 }
 
-runHistograms <- function(sample=1000,
-						  good.bad.ratio = def$good.bad.ratio, 
-						  shape.good = def$shape.good, 
-						  scale.good = def$scale.good, 
-						  shape.bad = def$shape.bad, 
-						  scale.bad = def$scale.bad,
-						  do.annotate=FALSE) {
-
-	good.fit <- rweibull(sample * good.bad.ratio, shape=shape.good, scale=scale.good)
-	bad.fit <- rweibull(sample * (1-good.bad.ratio), shape=shape.bad, scale=scale.bad)
-
-	fig1 <- ggplot(data=data.frame(tenure=c(good.fit, bad.fit)), aes(x=tenure)) + 
-					geom_histogram(binwidth=1/12, fill=def$col.benefit) + 
-					xlim(c(0,3)) +
-					theme_bw() +
-					theme(text = element_text(size=8)) +
-					labs(title="All Employees", 
-						 x="Tenure in Years", 
-						 y="Count")
-
-	fig2 <- ggplot(data=data.frame(tenure=good.fit), aes(x=tenure)) + 
-					geom_histogram(binwidth=1/12, fill=def$col.good) + 
-					xlim(c(0,3)) +
-					theme_bw() +
-					theme(text = element_text(size=8)) +
-					labs(title="'Good Fit' Employees", 
-						 x="Tenure in Years", 
-						 y="Count")
-
-	fig3 <- ggplot(data=data.frame(tenure=bad.fit), aes(x=tenure)) + 
-				geom_histogram(binwidth=1/12, fill=def$col.bad) + 
-				xlim(c(0,3)) +
-				theme_bw() +
-				theme(text = element_text(size=8)) +
-				labs(title="'Bad Fit' Employees", 
-					 x="Tenure in Years", 
-					 y="Count")
-
-	fig123 <- arrangeGrob(fig1, fig2, fig3, main="Employment Tenure", ncol=1)
-
-	return(fig123)
-}
-
-runFigures <- function() {
-
-	# fig123 <- runHistograms(list.plot=TRUE, do.annotate=TRUE)
-
-	# lapply(names(fig123), 
-	# 	   function(x) {
-	# 		   fname <- sprintf("plots/pat002_%s.png",x) 
-	# 		   writeLines(sprintf("writing %s", fname))
-	# 		   ggsave(filename=sprintf("plots/pat002_%s.png",x), 
-	# 						  plot=fig123[[x]],
-	# 						  height=4, width=4,dpi=100)
-	# 	   })
-
-	# fig4567 <- runSim202(list.plot=TRUE, do.annotate=TRUE)
-
-	# lapply(names(fig4567), 
-	# 	   function(x) {
-	# 		   fname <- sprintf("plots/pat002_%s.png",x) 
-	# 		   writeLines(sprintf("writing %s", fname))
-	# 		   ggsave(filename=fname, plot=fig4567[[x]], height=4, width=4,dpi=100)
-	# 	   })
-
-	# return("Done.")
-}
-
-gen.timeline <- function(emp=150) {
-	days <- def$max.yrs*365
-	target <- 2014.2
-
-	d.t <- data.frame(id=1:emp)
-
-	# fake hire date
-	d.t$hire <- sample(days, emp, replace=TRUE)/365 + 2010
-	# fake tenure from weibulls
-	d.t$tenure.yrs <- c(rweibull(def$good.bad.ratio * emp, shape=def$shape.good, scale=def$scale.good),
-						rweibull((1-def$good.bad.ratio) * emp, shape=def$shape.bad, scale=def$scale.bad))
-	d.t$tenure.yrs <- sapply(d.t$tenure.yrs, function(x) { max(0.1,x)})
-	# fake emp.type
-	d.t$emp.type <- factor(ifelse(d.t$id <= def$good.bad.ratio * emp,"group.a","group.b"))
-	# fake term date
-	d.t$term <- d.t$hire + d.t$tenure.yrs
-	# is.term
-	d.t$is.term <- d.t$term <= target
-	# term.class
-	d.t$term.class <- factor(ifelse(d.t$is.term, "already.term", "still.working"))
-
-	return(d.t)
-}
-
-calc.dist <- function(max.yrs=def$max.yrs, max.benefit=def$max.benefit, 
-					  cost.ramp=def$cost.ramp, cost.scale=def$cost.scale, salary=def$salary,
-					  shape.good=def$shape.good, scale.good=def$scale.good, 
-					  shape.bad=def$shape.bad, scale.bad=def$scale.bad, 
-					  good.bad.ratio=def$good.bad.ratio) {
-	
-	# divide our years uniformly, 100 pts a year
-	dist.year <- as.data.frame( 0:(max.yrs*100)/100 )
-	names(dist.year) <- "tenure"
-	dist.year$benefit <- empBenefit(dist.year$tenure, max.benefit)
-	dist.year$benefit.cume <- empBenefitCume(dist.year$tenure, max.benefit)
-	dist.year$cost <- empCost(dist.year$tenure, cost.ramp, cost.scale, salary)
-	dist.year$cost.cume <- empCostCume(dist.year$tenure, cost.ramp, cost.scale, salary)
-	dist.year$prob.good <- dweibull(dist.year$tenure, shape=shape.good, scale=scale.good)
-	dist.year$prob.bad <- dweibull(dist.year$tenure, shape=shape.bad, scale=scale.bad)
-	dist.year$prob.good.wt <- dist.year$prob.good * good.bad.ratio
-	dist.year$prob.bad.wt <- dist.year$prob.bad * (1-good.bad.ratio)
-
-	return(dist.year)
-}
-
-calc.breakeven <- function(dist.year) {
-	# calc breakeven points
-	# TODO C: could solve for breakeven point in another way, to handle off-chart cases, 
-	#         but in that case, they would be off the chart.... so who cares.
-
-	break.even <- list()
-	break.even$pt.id <- which.max(dist.year$benefit - dist.year$cost > 0)
-	break.even$pt <- dist.year$tenure[break.even$pt.id]
-	break.even$cume.id <- which.max(dist.year$benefit.cume - dist.year$cost.cume > 0)
-	break.even$cume <- dist.year$tenure[break.even$cume.id]
-
-	writeLines(sprintf("Daily breakeven at %.2f, cume breakeven at %.2f", 
-					   break.even$pt, break.even$cume))
-	return(break.even)
-}
-
-# TODO: plot with arrows
-# TODO: timeline
-# TODO: histogram, surv curve
-# TODO: multi surv curve with breakeven
-
-
-# fig2 <- ggplot(d.timeline,
-# 		   aes(x=hire, xmin=hire, xmax=term, y=id, col=term.class)) + 
-# 		geom_errorbarh(height=3, size=0.65) + 
-# 		scale_color_hue(name="term.class") +
-# 		geom_vline(xintercept=2014.2,col="red", size=0.65, linetype="dashed") +
-# 		annotate("text", 
-# 				 x= 2014.2 + 0.02, 
-# 				 y= 0, 
-# 				 size=4,
-# 				 color="Red",
-# 				 label="Today",
-# 				 hjust=0, vjust=1) +
-# 		scale_x_continuous(limits=c(2010,2016)) +
-# 		labs(x="Hire Date", y="Employees") +
-# 		theme_bw() + 
-# 		theme(legend.position="bottom",
-# 			  axis.ticks.y=element_blank(),
-# 			  axis.text.y=element_blank())
-
-
-# fig3 <- ggplot(d.timeline,
-# 		   aes(x=tenure.yrs, xmin=0, xmax=tenure.yrs,
-# 			   y=id, col=term.class)) + 
-# 		geom_errorbarh(height=5, size=0.65) + 
-# 		scale_color_hue(name="term.class") +
-# 		geom_vline(xintercept=be.pt,col="Blue", size=0.65, linetype="dashed") +
-# 		annotate("text", 
-# 				 x= be.pt + 0.02, 
-# 				 y= 0, 
-# 				 size=4,
-# 				 color="Blue",
-# 				 label="Monthly B/E",
-# 				 hjust=0, vjust=1) +
-# 		geom_vline(xintercept=be.cume,col="DarkGreen", size=0.65, linetype="dashed") +
-# 		annotate("text", 
-# 				 x= be.cume + 0.02, 
-# 				 y= 0, 
-# 				 size=4,
-# 				 color="DarkGreen",
-# 				 label="Cumulative B/E",
-# 				 hjust=0, vjust=1) +
-# 		scale_x_continuous() +
-# 		labs(x="Years Tenure", y="Employees") +
-# 		theme_bw() + 
-# 		theme(legend.position="bottom",
-# 			  axis.ticks.y=element_blank(),
-# 			  axis.text.y=element_blank())
-
-# just a simple program to make quick bar charts as needed
 twoBars <- function(var.a, val.a, var.b, val.b) {
+	# just a simple program to make quick bar charts as needed
 	d.g <- data.frame(rbind(c(var.a, val.a), c(var.b, val.b)))
 	names(d.g) <- c("variable", "value")
 	d.g$variable <- factor(d.g$variable, levels=c(var.a, var.b))
@@ -630,5 +638,5 @@ twoBars <- function(var.a, val.a, var.b, val.b) {
 	theme(legend.position="none") 
 }
 
-# everything here runs on source
+# everything below here runs on source
 def <- setDefaults()
