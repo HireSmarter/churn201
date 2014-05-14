@@ -3,6 +3,7 @@ library(gridExtra)
 library(scales)
 library(manipulate)
 library(survival)
+library(GGally)
 
 setDefaults <- function() {
 	gpal <- scales::hue_pal(h = c(0, 360) + 15, c = 100, l = 65, h.start = 0, direction=1)(8)
@@ -233,7 +234,7 @@ runPredNetCume <- function(max.benefit = def$max.benefit,
 }
 
 g.probTerm <- function(dist.year, break.even, max.yrs=def$max.yrs, do.annotate=FALSE) {
-	zg <- suppressWarnings(
+	zg <- (
 			ggplot(data=dist.year, aes(x=tenure)) + 
 			geom_vline(xintercept=break.even$pt, col=def$col.be, size=0.5, linetype="dashed") +
 			geom_vline(xintercept=break.even$cume, col=def$col.be.cume, size=0.5, linetype="dashed") +
@@ -262,7 +263,7 @@ g.probTerm <- function(dist.year, break.even, max.yrs=def$max.yrs, do.annotate=F
 }
 
 g.costBenefit <- function(dist.year, break.even, max.yrs=def$max.yrs, do.annotate=FALSE) {
-	zg <- suppressWarnings(
+	zg <- (
 			ggplot(data=dist.year, aes(x=tenure)) + 
 			geom_vline(xintercept=break.even$pt, col=def$col.be, size=0.5, linetype="dashed") +
 			geom_vline(xintercept=break.even$cume, col=def$col.be.cume, size=0.5, linetype="dashed") +
@@ -303,7 +304,7 @@ g.costBenefit <- function(dist.year, break.even, max.yrs=def$max.yrs, do.annotat
 
 g.cumeValue <- function(dist.year, break.even, max.yrs=def$max.yrs, do.annotate=FALSE) {
 
-	zg <- suppressWarnings(
+	zg <- (
 			ggplot(data=dist.year, aes(x=tenure)) + 
 			geom_vline(xintercept=break.even$pt, col=def$col.be, size=0.5, linetype="dashed") +
 			geom_vline(xintercept=break.even$cume, col=def$col.be.cume, size=0.5, linetype="dashed") +
@@ -349,7 +350,7 @@ g.cumeValue <- function(dist.year, break.even, max.yrs=def$max.yrs, do.annotate=
 
 g.cumeValueTimeline <- function(dist.year, break.even, time.line, max.yrs=def$max.yrs, do.annotate=FALSE) {
 
-	zg <- suppressWarnings(
+	zg <- (
 		  g.cumeValue(dist.year, break.even, max.yrs, do.annotate) +
 
 		geom_errorbarh(data=time.line, height=0.03, size=0.4, col="steelblue",
@@ -364,7 +365,7 @@ g.cumeValueTimeline <- function(dist.year, break.even, time.line, max.yrs=def$ma
 
 g.expCume <- function(dist.year, break.even, evh, max.yrs=def$max.yrs, do.annotate=FALSE) {
 
-	zg <- suppressWarnings(
+	zg <- (
 			   ggplot(data=dist.year, aes(x=tenure)) + 
 			   geom_vline(xintercept=break.even$pt, col=def$col.be, size=0.5, linetype="dashed") +
 			   geom_vline(xintercept=break.even$cume, col=def$col.be.cume, size=0.5, linetype="dashed") +
@@ -405,7 +406,7 @@ g.expCume <- function(dist.year, break.even, evh, max.yrs=def$max.yrs, do.annota
 
 g.timeline <- function(d.timeline) {
 
-	zg <- suppressWarnings(
+	zg <- (
 		ggplot(d.timeline,
 			   aes(x=hire, 
 				   xmin=hire, 
@@ -431,61 +432,51 @@ g.timeline <- function(d.timeline) {
 	return(zg)
 }
 
-runHistograms <- function(sample=1000,
-						  good.bad.ratio = def$good.bad.ratio, 
-						  shape.good = def$shape.good, 
-						  scale.good = def$scale.good, 
-						  shape.bad = def$shape.bad, 
-						  scale.bad = def$scale.bad,
-						  do.annotate=FALSE) {
+g.histogram <- function(d.timeline, break.even, max.yrs=def$max.yrs) {
 
-	good.fit <- rweibull(sample * good.bad.ratio, shape=shape.good, scale=scale.good)
-	bad.fit <- rweibull(sample * (1-good.bad.ratio), shape=shape.bad, scale=scale.bad)
+	zg <- (
+			   ggplot(data=d.timeline, aes(x=tenure.yrs)) + 
+			   geom_histogram(binwidth=1/12, fill=def$col.benefit) + 
 
-	fig1 <- ggplot(data=data.frame(tenure=c(good.fit, bad.fit)), aes(x=tenure)) + 
-					geom_histogram(binwidth=1/12, fill=def$col.benefit) + 
-					xlim(c(0,3)) +
-					theme_bw() +
-					theme(text = element_text(size=8)) +
-					labs(title="All Employees", 
-						 x="Tenure in Years", 
-						 y="Count")
+			   geom_vline(xintercept=break.even$pt, col=def$col.be, size=0.5, linetype="dashed") +
+			   geom_vline(xintercept=break.even$cume, col=def$col.be.cume, size=0.5, linetype="dashed") +
+			   theme_bw() +
+			   # theme(text = element_text(size=8), 
+					 # axis.title.y = element_text(size=8)) +
+			   xlim(c(0, max.yrs)) +
+			   labs(title="All Employees", 
+					x="Tenure in Years", 
+					y="Count"))
+	return(zg)
+}
 
-	fig2 <- ggplot(data=data.frame(tenure=good.fit), aes(x=tenure)) + 
-					geom_histogram(binwidth=1/12, fill=def$col.good) + 
-					xlim(c(0,3)) +
-					theme_bw() +
-					theme(text = element_text(size=8)) +
-					labs(title="'Good Fit' Employees", 
-						 x="Tenure in Years", 
-						 y="Count")
+g.survival <- function(data, break.even, 
+					   title="Kaplan-Meier Survival Estimator", 
+					   surv.split=FALSE, 
+					   max.yr = def$max.yr) {
 
-	fig3 <- ggplot(data=data.frame(tenure=bad.fit), aes(x=tenure)) + 
-				geom_histogram(binwidth=1/12, fill=def$col.bad) + 
-				xlim(c(0,3)) +
-				theme_bw() +
-				theme(text = element_text(size=8)) +
-				labs(title="'Bad Fit' Employees", 
+	surv.obj <- Surv(data$tenure.yrs, data$is.term)
+
+	if (surv.split) {
+		surv.fit <- survfit(surv.obj ~ data$emp.type)
+	} else {
+		surv.fit <- survfit(surv.obj ~ 1)
+	}
+
+	zg <- (
+			ggsurv(surv.fit, plot.cens=TRUE) + 
+				scale_y_continuous(labels = percent_format()) +
+				geom_vline(xintercept=break.even$cume, col="rosybrown") +
+				labs(title=title,
 					 x="Tenure in Years", 
-					 y="Count")
-
-	fig123 <- arrangeGrob(fig1, fig2, fig3, main="Employment Tenure", ncol=1)
-
-	return(fig123)
+					 y="Probability of Attaining Tenure") + 
+				theme_bw() +
+				theme(legend.position = "none") +
+				xlim(c(0, max.yr)))
+	return(zg)
 }
 
 runFigures <- function() {
-
-	# fig123 <- runHistograms(list.plot=TRUE, do.annotate=TRUE)
-
-	# lapply(names(fig123), 
-	# 	   function(x) {
-	# 		   fname <- sprintf("plots/pat002_%s.png",x) 
-	# 		   writeLines(sprintf("writing %s", fname))
-	# 		   ggsave(filename=sprintf("plots/pat002_%s.png",x), 
-	# 						  plot=fig123[[x]],
-	# 						  height=4, width=4,dpi=100)
-	# 	   })
 
 	# calc with defaults
 	dist.year <- calcDist()
@@ -505,24 +496,32 @@ runFigures <- function() {
 		   g.expCume(dist.year, break.even, evh, do.annotate=TRUE),
 		   height=6.75, width=6, dpi=100)
 
-	timeline.small <- genTimeline(100)
 	ggsave("plots/pat003_cume_time.png", 
-		   g.cumeValueTimeline(dist.year, break.even, timeline.small),
+		   g.cumeValueTimeline(dist.year, break.even, genTimeline(100)),
 		   height=6.75, width=6, dpi=100)
 
-	timeline.big <- genTimeline(200)
 	ggsave("plots/pat003_time_line.png", 
-		   g.timeline(timeline.big),
+		   g.timeline(genTimeline(200)),
 		   height=6.75, width=6, dpi=100)
 
-	# TODO A: histogram, surv curve
-	# TODO A: multi surv curve with breakeven
+	big.random <- genTimeline(500)
 
+	ggsave("plots/pat003_histogram.png", 
+		   g.histogram(big.random, break.even),
+		   height=6.75, width=6, dpi=100)
+	
+	ggsave("plots/pat003_survival.png", 
+		   g.survival(big.random, break.even),
+		   height=6.75, width=6, dpi=100)
+
+	ggsave("plots/pat003_surv_split.png", 
+		   g.survival(big.random, break.even, 
+					  title="Multiple Survival Curves",
+					  surv.split=TRUE),
+		   height=6.75, width=6, dpi=100)
 }
 
-# TODO B: cumsum
-
-
+# TODO B: cumsum = doesn't affect paw
 
 
 runSensitivityTests <- function() {
