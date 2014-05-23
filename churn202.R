@@ -24,6 +24,8 @@ setDefaults <- function() {
 	def$col.cost <- gpal[1]		# salmon
 	def$col.good <- gpal[5]		# blue-grey
 	def$col.bad <- gpal[2]		# brown
+	def$col.other1 <- gpal[7]	# purple
+	def$col.other2 <- gpal[6]	# blue
 	def$col.be <- "DarkGray"
 	def$col.be.cume <- "DarkGray"
 
@@ -289,7 +291,7 @@ g.probTerm <- function(dist.year, break.even, max.yrs=def$max.yrs, do.annotate=F
 			xlim(c(0, max.yrs)) +
 			labs(title="Probability of Employee Termination", 
 				 x="Tenure in Years", 
-				 y="Probability")
+				 y="Daily Probability of Termination")
 
 	if (do.annotate) {
 		zg <- zg + 
@@ -349,16 +351,22 @@ g.cumeCostBenefit <- function(dist.year, break.even, max.yrs=def$max.yrs, do.ann
 			geom_vline(xintercept=break.even$pt, col=def$col.be, size=0.5, linetype="dashed") +
 			geom_vline(xintercept=break.even$cume, col=def$col.be.cume, size=0.5, linetype="dashed") +
 			geom_hline(yintercept=0, col=def$col.be.cume, size=0.5, linetype="dotted") +
+
+			geom_ribbon(size=0, alpha=0.5,
+						aes(ymax=cost.cume, ymin=benefit.cume, 
+							fill=(benefit.cume-cost.cume)>0)) + 
 			geom_line(aes(y=benefit.cume), size=1, col=def$col.benefit) +
 			geom_line(aes(y=cost.cume), size=1, col=def$col.cost) +
+
 			scale_y_continuous(labels = percent) +
 			scale_color_manual(values=c(def$col.cost, def$col.benefit)) +
+			scale_fill_manual(values=c(def$col.cost, def$col.benefit)) +
 			theme_bw() +
 		   	theme(legend.position="none") +
 		   	xlim(c(0,max.yrs)) +
 		   	labs(title="Cumulative Cost and Benefit", 
 					x="Tenure in Years", 
-					y="Cumulative Cost or Benefit")
+					y="% Potential Value")
 
 	if (do.annotate) {
 		zg <- zg +
@@ -402,7 +410,7 @@ g.cumeValue <- function(dist.year, break.even, max.yrs=def$max.yrs, do.annotate=
 			xlim(c(0,max.yrs)) +
 			labs(title="Cumulative Net Benefit", 
 				 x="Tenure in Years", 
-				 y="Cumulative Net Benefit")
+				 y="% Potential Value")
 
 	if (do.annotate) {
 		zg <- zg +
@@ -465,7 +473,7 @@ g.expCume <- function(dist.year, break.even, evh, max.yrs=def$max.yrs, do.annota
 		   xlim(c(0,max.yrs)) +
 		   labs(title="Expected Cumulative Net Benefit", 
 				x="Tenure in Years", 
-				y="Cumulative Net Benefit\nx Probability")
+				y="% Potential Value")
 
 	if (do.annotate) {
 		zg <- zg +
@@ -508,7 +516,11 @@ g.costArea <- function(dist.year, break.even, max.yrs=def$max.yrs,
 			# geom_line(aes(y=profit), col=def$col.benefit, size=1, linetype="dotted") +
 
 			scale_y_continuous(labels = percent) +
-			scale_fill_discrete(h=c(0,360)+210, c=100, l=65, name="Component") + 
+			scale_fill_manual(values=c(def$col.good, 
+									   def$col.other1, 
+									   def$col.other2, 
+									   def$col.cost, 
+									   def$col.benefit )) +
 			theme_bw() +
 			theme(legend.position="bottom") +
 			# theme(text = element_text(size=8), 
@@ -517,7 +529,7 @@ g.costArea <- function(dist.year, break.even, max.yrs=def$max.yrs,
 			xlim(c(0,max.yrs)) +
 			labs(title=main.title, 
 				 x="Tenure in Years", 
-				 y="Percent of Employee Benefit")
+				 y="% Potential Value")
 	return(zg)
 }
 
