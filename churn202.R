@@ -56,7 +56,7 @@ runSim202 <- function(max.yrs=def$max.yrs, max.benefit=def$max.benefit,
 					  do.annotate=FALSE) {
 	# run the sim, return the plots and print out cume info
 
-	dist.year <- calc.dist(max.yrs, max.benefit, cost.ramp, cost.scale, salary,
+	dist.year <- calcDist(max.yrs, max.benefit, cost.ramp, cost.scale, salary,
 					  shape.good, scale.good, shape.bad, scale.bad, good.bad.ratio)
 
 	break.even <- calcBreakeven(dist.year)
@@ -109,17 +109,62 @@ calcDist <- function(max.yrs=def$max.yrs, max.benefit=def$max.benefit,
 					  shape.bad=def$shape.bad, scale.bad=def$scale.bad, 
 					  good.bad.ratio=def$good.bad.ratio) {
 	
-	# divide our years uniformly, 100 pts a year
-	dist.year <- as.data.frame( 0:(max.yrs*100)/100 )
-	names(dist.year) <- "tenure"
+	### TIME
+	# divide our years uniformly, 100 pts a year (from now one day = 1/100 year)
+	dist.year <- data.frame( tenure=0:(max.yrs*100)/100 )
+
+	### BENEFIT
+	# daily employee benefit 
 	dist.year$benefit <- empBenefit(dist.year$tenure, max.benefit)
+	# cumulative emp benefit
 	dist.year$benefit.cume <- empBenefitCume(dist.year$tenure, max.benefit)
+
+	### BENEFIT
+	# daily emp cost
 	dist.year$cost <- empCost(dist.year$tenure, cost.ramp, cost.scale, salary)
+	# cumulative emp cost
 	dist.year$cost.cume <- empCostCume(dist.year$tenure, cost.ramp, cost.scale, salary)
+
+	### COST/BENEFIT BREAKOUT
+	# salary costs per "day" (/100)
+	dist.year$salary <- salary
+	# non-salary costs per "day"
+	dist.year$non.salary <- dist.year$cost - salary
+
+	# cost of learning - cost of being less productive than optimal benefit 1
+	dist.year$learning <- 1 - dist.year$benefit
+
+	# cumulative amount "owed" by being cost>benefit
+	# need to use cume because the integration is correct, not dailies! (just by a small fraction)
+	dist.year$debt <- dist.year$cost.cume - dist.year$benefit.cume
+	dist.year$debt[dist.year$debt < 0] <- 0
+
+	# the employer profit
+	dist.year$profit <- dist.year$benefit - dist.year$cost
+	dist.year$profit[dist.year$profit < 0] <- 0
+
+	# debt.payment is slightly off because of integration vs. daily
+	# so sum(dist.year$debt.payment) is close but not exactly = sum(dist.year$debt)
+	dist.year$debt.payment <- ifelse(dist.year$debt > 0 & dist.year$profit > 0,
+									 dist.year$profit, 0)
+	dist.year$profit <- dist.year$profit - dist.year$debt.payment
+
+	### PROBABILITIES
+	# prob of good.fit terminating today, within good.fit sample
 	dist.year$prob.good <- dweibull(dist.year$tenure, shape=shape.good, scale=scale.good)
+	# prob of bad.fit terminating today, within bad.fit sample
 	dist.year$prob.bad <- dweibull(dist.year$tenure, shape=shape.bad, scale=scale.bad)
+
+	# prob of good.fit terminating today, within whole sample
 	dist.year$prob.good.wt <- dist.year$prob.good * good.bad.ratio
+	# prob of bad terminating today, within whole sample
 	dist.year$prob.bad.wt <- dist.year$prob.bad * (1-good.bad.ratio)
+
+	### CHANGE MIX BY 10%
+	# prob of good.fit terminating today, within whole sample
+	dist.year$prob.good.wt2 <- dist.year$prob.good * (good.bad.ratio + 0.1)
+	# prob of bad terminating today, within whole sample
+	dist.year$prob.bad.wt2 <- dist.year$prob.bad * (1-good.bad.ratio-0.1)
 
 	return(dist.year)
 }
@@ -234,28 +279,26 @@ runPredNetCume <- function(max.benefit = def$max.benefit,
 }
 
 g.probTerm <- function(dist.year, break.even, max.yrs=def$max.yrs, do.annotate=FALSE) {
-	zg <- (
-			ggplot(data=dist.year, aes(x=tenure)) + 
+	zg <- ggplot(data=dist.year, aes(x=tenure)) + 
 			geom_vline(xintercept=break.even$pt, col=def$col.be, size=0.5, linetype="dashed") +
 			geom_vline(xintercept=break.even$cume, col=def$col.be.cume, size=0.5, linetype="dashed") +
 			geom_line(aes(y=prob.bad), col=def$col.bad, size=1) +
 			geom_line(aes(y=prob.good), col=def$col.good, size=1) +
 			scale_y_continuous(labels = percent) +
 			theme_bw() +
-			theme(text = element_text(size=8), 
-				  axis.title.y = element_text(size=8)) +
-						   xlim(c(0, max.yrs)) +
-						   labs(title="Probability of Employee Termination", 
-								x="Tenure in Years", 
-								y="Probability"))
+			xlim(c(0, max.yrs)) +
+			labs(title="Probability of Employee Termination", 
+				 x="Tenure in Years", 
+				 y="Probability")
+
 	if (do.annotate) {
 		zg <- zg + 
 				annotate("text", 
-						x=1.75, y=0.7, hjust=0, vjust=1,
+						x=1.75, y=0.47, hjust=0, vjust=1,
 						color=def$col.good,
 						label="Good Fit") +
 				annotate("text", 
-						 x=0.5, y=2, hjust=0, vjust=1,
+						 x=0.5, y=1.25, hjust=0, vjust=1,
 						 color=def$col.bad,
 						 label="Bad Fit")
 	}
@@ -263,8 +306,7 @@ g.probTerm <- function(dist.year, break.even, max.yrs=def$max.yrs, do.annotate=F
 }
 
 g.costBenefit <- function(dist.year, break.even, max.yrs=def$max.yrs, do.annotate=FALSE) {
-	zg <- (
-			ggplot(data=dist.year, aes(x=tenure)) + 
+	zg <- ggplot(data=dist.year, aes(x=tenure)) + 
 			geom_vline(xintercept=break.even$pt, col=def$col.be, size=0.5, linetype="dashed") +
 			geom_vline(xintercept=break.even$cume, col=def$col.be.cume, size=0.5, linetype="dashed") +
 			geom_ribbon(fill=def$col.cost, size=0, aes(ymax=cost,ymin=benefit,alpha=cost>benefit)) + 
@@ -274,20 +316,19 @@ g.costBenefit <- function(dist.year, break.even, max.yrs=def$max.yrs, do.annotat
 			geom_line(col=def$col.benefit, size=1, aes(y=benefit)) +
 			scale_y_continuous(labels = percent) +
 			theme_bw() +
-			theme(text = element_text(size=8), 
-				  axis.title.y = element_text(size=8)) +
-						   theme(legend.position="none") +
-						   labs(title="Benefit & Cost of One Employee", 
-								x="Tenure in Years", 
-								y="% Potential Value"))
+			theme(legend.position="none") +
+			labs(title="Benefit & Cost of One Employee", 
+				 x="Tenure in Years", 
+				 y="% Potential Value")
+
 	if (do.annotate) {
 		zg <- zg +
 			 annotate("text", 
-					  x=2.5, y=1, hjust=0, vjust=-0.2,
+					  x=2.5, y=1.02, hjust=0, vjust=-0.2,
 					  color=def$col.benefit,
 					  label="Benefit") +
 			 annotate("text", 
-					  x=2.5, y=0.5, hjust=0, vjust=-0.2,
+					  x=2.5, y=0.52, hjust=0, vjust=-0.2,
 					  color=def$col.cost,
 					  label="Cost") +
 			 annotate("text", 
@@ -302,30 +343,67 @@ g.costBenefit <- function(dist.year, break.even, max.yrs=def$max.yrs, do.annotat
 	return(zg)
 }
 
+g.cumeCostBenefit <- function(dist.year, break.even, max.yrs=def$max.yrs, do.annotate=FALSE) {
+
+	zg <- ggplot(data=dist.year, aes(x=tenure)) + 
+			geom_vline(xintercept=break.even$pt, col=def$col.be, size=0.5, linetype="dashed") +
+			geom_vline(xintercept=break.even$cume, col=def$col.be.cume, size=0.5, linetype="dashed") +
+			geom_hline(yintercept=0, col=def$col.be.cume, size=0.5, linetype="dotted") +
+			geom_line(aes(y=benefit.cume), size=1, col=def$col.benefit) +
+			geom_line(aes(y=cost.cume), size=1, col=def$col.cost) +
+			scale_y_continuous(labels = percent) +
+			scale_color_manual(values=c(def$col.cost, def$col.benefit)) +
+			theme_bw() +
+		   	theme(legend.position="none") +
+		   	xlim(c(0,max.yrs)) +
+		   	labs(title="Cumulative Cost and Benefit", 
+					x="Tenure in Years", 
+					y="Cumulative Cost or Benefit")
+
+	if (do.annotate) {
+		zg <- zg +
+				 annotate("text", 
+						  x=2.5, y=0.9, hjust=0.5, vjust=0,
+						  color=def$col.benefit,
+						  label="Cumulative Benefit") +
+				 annotate("text", 
+						  x=0.65, y=0.9, hjust=0.6, vjust=0,
+						  color=def$col.cost,
+						  label="Cumulative Cost") #+
+				 # annotate("text", 
+						  # x=break.even$pt, y=0.90, hjust=-0.1, vjust=0,
+						  # color=def$col.be,
+						  # label="B/E") +
+				 # annotate("text", 
+						  # x=break.even$cume, y=0.90, hjust=-0.1, vjust=0,
+						  # color=def$col.be,
+						  # label="B/E Cume")
+	}
+	return(zg)
+}
+
 g.cumeValue <- function(dist.year, break.even, max.yrs=def$max.yrs, do.annotate=FALSE) {
 
-	zg <- (
-			ggplot(data=dist.year, aes(x=tenure)) + 
+	zg <- ggplot(data=dist.year, aes(x=tenure)) + 
 			geom_vline(xintercept=break.even$pt, col=def$col.be, size=0.5, linetype="dashed") +
 			geom_vline(xintercept=break.even$cume, col=def$col.be.cume, size=0.5, linetype="dashed") +
 			geom_hline(yintercept=0, col=def$col.be.cume, size=0.5, linetype="dotted") +
 			geom_ribbon(size=0, alpha=0.5, ymin=0,
 						aes(ymax=(benefit.cume-cost.cume), 
 							fill=(benefit.cume-cost.cume)>0)) + 
-						   geom_line(size=1, 
-									 aes(y=(benefit.cume-cost.cume),
-										 col=(benefit.cume-cost.cume)>0)) +
-						   scale_y_continuous(labels = percent) +
-						   scale_fill_manual(values=c(def$col.cost, def$col.benefit)) +
-						   scale_color_manual(values=c(def$col.cost, def$col.benefit)) +
-						   theme_bw() +
-						   theme(text = element_text(size=8), 
-								 axis.title.y = element_text(size=8)) +
-						   theme(legend.position="none") +
-						   xlim(c(0,max.yrs)) +
-						   labs(title="Cumulative Net Benefit", 
-								x="Tenure in Years", 
-								y="Cumulative Net Benefit"))
+			geom_line(size=1, 
+					  aes(y=(benefit.cume-cost.cume),
+						  col=(benefit.cume-cost.cume)>0)) +
+			scale_y_continuous(labels = percent) +
+			scale_fill_manual(values=c(def$col.cost, def$col.benefit)) +
+			scale_color_manual(values=c(def$col.cost, def$col.benefit)) +
+			theme_bw() +
+			theme(legend.position="none") +
+			xlim(c(0,max.yrs)) +
+			labs(title="Cumulative Net Benefit", 
+				 x="Tenure in Years", 
+				 y="Cumulative Net Benefit")
+
 	if (do.annotate) {
 		zg <- zg +
 				 annotate("text", 
@@ -333,7 +411,7 @@ g.cumeValue <- function(dist.year, break.even, max.yrs=def$max.yrs, do.annotate=
 						  color=def$col.benefit,
 						  label="Net Benefit") +
 				 annotate("text", 
-						  x=1, y=0.1, hjust=0.5, vjust=1,
+						  x=1.4, y=0.1, hjust=0.5, vjust=1,
 						  color=def$col.cost,
 						  label="Net Cost") +
 				 annotate("text", 
@@ -350,54 +428,145 @@ g.cumeValue <- function(dist.year, break.even, max.yrs=def$max.yrs, do.annotate=
 
 g.cumeValueTimeline <- function(dist.year, break.even, time.line, max.yrs=def$max.yrs, do.annotate=FALSE) {
 
-	zg <- (
-		  g.cumeValue(dist.year, break.even, max.yrs, do.annotate) +
+	zg <- g.cumeValue(dist.year, break.even, max.yrs, do.annotate) +
 
-		geom_errorbarh(data=time.line, height=0.03, size=0.4, col="steelblue",
-					   aes(x=tenure.yrs, 
-						   xmin=0, 
-						   xmax=tenure.yrs, 
-						   y=randex)) +
-		labs(main="few"))
+			geom_errorbarh(data=time.line, height=0.03, size=0.4, col="steelblue",
+						   aes(x=tenure.yrs, 
+							   xmin=0, 
+							   xmax=tenure.yrs, 
+							   y=randex)) +
+			labs(main="")
 
 	return(zg)
 }
 
 g.expCume <- function(dist.year, break.even, evh, max.yrs=def$max.yrs, do.annotate=FALSE) {
 
-	zg <- (
-			   ggplot(data=dist.year, aes(x=tenure)) + 
-			   geom_vline(xintercept=break.even$pt, col=def$col.be, size=0.5, linetype="dashed") +
-			   geom_vline(xintercept=break.even$cume, col=def$col.be.cume, size=0.5, linetype="dashed") +
-			   geom_hline(yintercept=0, col=def$col.be.cume, size=0.5, linetype="dotted") +
-			   geom_ribbon(fill=def$col.bad, size=0, alpha=0.5, ymin=0,
-						   aes(ymax=(benefit.cume-cost.cume)*prob.bad.wt)) + 
-						   geom_line(aes(y=(benefit.cume-cost.cume)*prob.bad.wt), col=def$col.bad, size=1) +
-						   geom_ribbon(fill=def$col.good, size=0, alpha=0.5, ymin=0,
-									   aes(ymax=(benefit.cume-cost.cume)*prob.good.wt)) + 
-						   geom_line(aes(y=(benefit.cume-cost.cume)*prob.good.wt), col=def$col.good, size=1) +
-						   annotate("text", 
-									x=1.5, y=-0.1, hjust=0, vjust=0,
-									size=4,
-									color=ifelse(evh<0,def$col.cost,def$col.benefit),
-									label=sprintf("EVH = %.1f%%",evh*100)) +
-						   scale_y_continuous(labels = percent) +
-						   theme_bw() +
-						   theme(text = element_text(size=8), 
-								 axis.title.y = element_text(size=8)) +
-						   xlim(c(0,max.yrs)) +
-						   labs(title="Expected Cumulative Net Benefit", 
-								x="Tenure in Years", 
-								y="Cumulative Net Benefit\nx Probability"))
+	zg <- ggplot(data=dist.year, aes(x=tenure)) + 
+		   geom_vline(xintercept=break.even$pt, col=def$col.be, size=0.5, linetype="dashed") +
+		   geom_vline(xintercept=break.even$cume, col=def$col.be.cume, size=0.5, linetype="dashed") +
+		   geom_hline(yintercept=0, col=def$col.be.cume, size=0.5, linetype="dotted") +
+
+		   geom_ribbon(fill=def$col.bad, size=0, alpha=0.5, ymin=0,
+					   aes(ymax=(benefit.cume-cost.cume)*prob.bad.wt)) + 
+		   geom_line(aes(y=(benefit.cume-cost.cume)*prob.bad.wt), col=def$col.bad, size=1) +
+
+		   geom_ribbon(fill=def$col.good, size=0, alpha=0.5, ymin=0,
+					   aes(ymax=(benefit.cume-cost.cume)*prob.good.wt)) + 
+		   geom_line(aes(y=(benefit.cume-cost.cume)*prob.good.wt), col=def$col.good, size=1) +
+
+		   annotate("text", 
+					x=3, y=-0.1, hjust=0, vjust=0,
+					size=4,
+					color=ifelse(evh<0,def$col.cost,def$col.benefit),
+					label=sprintf("EVH = %.1f%%",evh*100)) +
+		   scale_y_continuous(labels = percent) +
+		   theme_bw() +
+		   xlim(c(0,max.yrs)) +
+		   labs(title="Expected Cumulative Net Benefit", 
+				x="Tenure in Years", 
+				y="Cumulative Net Benefit\nx Probability")
 
 	if (do.annotate) {
 		zg <- zg +
 				 annotate("text", 
-						  x=1.5, y=0, hjust=0, vjust=1.5,
+						  x=1.9, y=0.07, hjust=0, vjust=1.5,
 						  color=def$col.good,
 						  label="Good Fit") +
 				 annotate("text", 
-						  x=0.45, y=-0.15, hjust=0, vjust=0,
+						  x=0.80, y=-0.2, hjust=0, vjust=0,
+						  color=def$col.bad,
+						  label="Bad Fit")
+	}
+	return(zg)
+}
+
+g.costArea <- function(dist.year, break.even, max.yrs=def$max.yrs, 
+					   alpha=0.7, main.title="Disposition of Employee Costs & Benefits",
+					   multiplier=1) {
+
+	zd <- dist.year[,c("tenure", "salary", "non.salary", 
+					   "learning", "debt.payment", "profit")]
+	zd.melt <- melt(zd, id.vars="tenure")
+
+	# use to scale the chart by probability
+	zd.melt$value <- zd.melt$value * pmax(0,multiplier)	 #1-cumsum(prob.bad)/100
+
+	zg <- 	ggplot(data=zd.melt, aes(x=tenure)) + 
+			geom_vline(xintercept=break.even$pt, col=def$col.be, size=0.5, linetype="dashed") +
+			geom_vline(xintercept=break.even$cume, col=def$col.be.cume, size=0.5, linetype="dashed") +
+			geom_hline(yintercept=1, col=def$col.be.cume, size=1, linetype="dashed") +
+
+			geom_area(aes(fill=variable, y=value), stat="identity", alpha=alpha) +
+
+			# geom_line(aes(y=salary), col=def$col.cost, size=1) +
+			# geom_line(aes(y=non.salary), col=def$col.cost, size=1, linetype="dotted") +
+			# geom_line(aes(y=learning), col=def$col.cost, size=1, linetype="dashed") +
+
+			# geom_line(aes(y=debt), col=def$col.bad, size=1, linetype="dashed") +
+			# geom_line(aes(y=debt.payment), col=def$col.good, size=1) +
+			# geom_line(aes(y=profit), col=def$col.benefit, size=1, linetype="dotted") +
+
+			scale_y_continuous(labels = percent) +
+			scale_fill_discrete(h=c(0,360)+210, c=100, l=65, name="Component") + 
+			theme_bw() +
+			theme(legend.position="bottom") +
+			# theme(text = element_text(size=8), 
+			# 	  axis.title.y = element_text(size=8)) +
+			# ylim(c(0,max(dist.year$cost.cume))) +
+			xlim(c(0,max.yrs)) +
+			labs(title=main.title, 
+				 x="Tenure in Years", 
+				 y="Percent of Employee Benefit")
+	return(zg)
+}
+
+g.costAreaTimeline <- function(dist.year, break.even, time.line, max.yrs=def$max.yrs, 
+							   main.title="Multiple Tenures in Employee Cost System") {
+
+	zg <- g.costArea(dist.year, break.even, max.yrs, alpha=0.4, main.title=main.title) +
+
+			geom_errorbarh(data=time.line, height=0.05, size=1, #col="steelblue",
+						   aes(x=tenure.yrs, 
+							   xmin=0, 
+							   xmax=tenure.yrs, 
+							   col=tenure.yrs > break.even$cume,
+							   y= 2 * randex)) +
+			theme(legend.position="none") +
+			labs(main=main.title)
+
+	return(zg)
+}
+
+g.survivalCurve <- function(dist.year, break.even, max.yrs=def$max.yrs, surv.split=TRUE, do.annotate=FALSE) {
+
+	zg <- ggplot(data=dist.year, aes(x=tenure)) + 
+		   geom_vline(xintercept=break.even$cume, col=def$col.be.cume, size=0.5, linetype="dashed") +
+
+		   scale_y_continuous(labels = percent) +
+		   theme_bw() +
+		   xlim(c(0,max.yrs)) +
+		   labs(title="Survival Curve", 
+				x="Tenure in Years", 
+				y="Probability of Reaching Tenure")
+
+	if (surv.split) {
+		zg <- zg + 
+			geom_line(aes(y=1-cumsum(prob.bad)/100), col=def$col.bad, size=1) +
+			geom_line(aes(y=1-cumsum(prob.good)/100), col=def$col.good, size=1)
+	} else {
+		zg <- zg + 
+			geom_line(aes(y=1-cumsum(prob.bad+prob.good)/200), col=def$col.benefit, size=1)
+	}
+
+	if (do.annotate & surv.split) {
+		zg <- zg +
+				 annotate("text", 
+						  x=3.0, y=0.25, hjust=0, vjust=0,
+						  color=def$col.good,
+						  label="Good Fit") +
+				 annotate("text", 
+						  x=0.80, y=0.25, hjust=0, vjust=0,
 						  color=def$col.bad,
 						  label="Bad Fit")
 	}
@@ -406,36 +575,33 @@ g.expCume <- function(dist.year, break.even, evh, max.yrs=def$max.yrs, do.annota
 
 g.timeline <- function(d.timeline) {
 
-	zg <- (
-		ggplot(d.timeline,
-			   aes(x=hire, 
-				   xmin=hire, 
-				   xmax=term, 
-				   y=randex, 
-				   col=term.class)) + 
-		   geom_errorbarh(height=0.02, size=0.6) + 
-		   scale_color_hue(name="term.class") +
-		   geom_vline(xintercept=2014.2,col="red", size=0.65, linetype="dashed") +
-		   annotate("text", 
-					x= 2014.2 + 0.02, 
-					y= 0, 
-					size=4,
-					color="Red",
-					label="Today",
-					hjust=0, vjust=1) +
-		   scale_x_continuous(limits=c(2010,2016)) +
-		   labs(x="Hire Date", y="Employees") +
-		   theme_bw() + 
-		   theme(legend.position="bottom",
-				 axis.ticks.y=element_blank(),
-				 axis.text.y=element_blank()))
+	zg <- ggplot(d.timeline, aes(x=hire, 
+								 xmin=hire, 
+								 xmax=term, 
+								 y=randex, 
+								 col=term.class)) + 
+			   geom_errorbarh(height=0.02, size=0.6) + 
+			   scale_color_hue(name="term.class") +
+			   geom_vline(xintercept=2014.2,col="red", size=0.65, linetype="dashed") +
+			   annotate("text", 
+						x= 2014.2 + 0.02, 
+						y= 0, 
+						size=4,
+						color="Red",
+						label="Today",
+						hjust=0, vjust=1) +
+			   scale_x_continuous(limits=c(2010,2016)) +
+			   labs(x="Hire Date", y="Employees") +
+			   theme_bw() + 
+			   theme(legend.position="bottom",
+					 axis.ticks.y=element_blank(),
+					 axis.text.y=element_blank())
 	return(zg)
 }
 
 g.histogram <- function(d.timeline, break.even, max.yrs=def$max.yrs) {
 
-	zg <- (
-			   ggplot(data=d.timeline, aes(x=tenure.yrs)) + 
+	zg <- ggplot(data=d.timeline, aes(x=tenure.yrs)) + 
 			   geom_histogram(binwidth=1/12, fill=def$col.benefit) + 
 
 			   geom_vline(xintercept=break.even$pt, col=def$col.be, size=0.5, linetype="dashed") +
@@ -446,7 +612,7 @@ g.histogram <- function(d.timeline, break.even, max.yrs=def$max.yrs) {
 			   xlim(c(0, max.yrs)) +
 			   labs(title="All Employees", 
 					x="Tenure in Years", 
-					y="Count"))
+					y="Count")
 	return(zg)
 }
 
@@ -463,16 +629,15 @@ g.survival <- function(data, break.even,
 		surv.fit <- survfit(surv.obj ~ 1)
 	}
 
-	zg <- (
-			ggsurv(surv.fit, plot.cens=TRUE) + 
+	zg <- ggsurv(surv.fit, plot.cens=FALSE) + 
 				scale_y_continuous(labels = percent_format()) +
-				geom_vline(xintercept=break.even$cume, col="rosybrown") +
+				geom_vline(xintercept=break.even$cume, col=def$col.be.cume, size=0.5, linetype="dashed") +
 				labs(title=title,
 					 x="Tenure in Years", 
 					 y="Probability of Attaining Tenure") + 
 				theme_bw() +
 				theme(legend.position = "none") +
-				xlim(c(0, max.yr)))
+				xlim(c(0, max.yr))
 	return(zg)
 }
 
@@ -482,44 +647,137 @@ runFigures <- function() {
 	dist.year <- calcDist()
 	break.even <- calcBreakeven(dist.year)
 	evh <- runPredNetCume()
+	time.big <- genTimeline(500)
+	time.med <- genTimeline(200)
+	time.small <- genTimeline(50)
 
-	ggsave("plots/pat003_prob_term.png", 
-		   g.probTerm(dist.year, break.even, do.annotate=TRUE), 
-		   height=6.75, width=6, dpi=100)
-	ggsave("plots/pat003_cost_benefit.png", 
-		   g.costBenefit(dist.year, break.even, do.annotate=TRUE),
-		   height=6.75, width=6, dpi=100)
-	ggsave("plots/pat003_cume_value.png", 
-		   g.cumeValue(dist.year, break.even, do.annotate=TRUE),
-		   height=6.75, width=6, dpi=100)
-	ggsave("plots/pat003_exp_cume.png", 
-		   g.expCume(dist.year, break.even, evh, do.annotate=TRUE),
-		   height=6.75, width=6, dpi=100)
+	ggsave("~/gitInternal/ta_presentations/images/empCosts/histogram.png",
+		   g.histogram(time.big, break.even), 
+		   height=6.75,width=6,dpi=100)
 
-	ggsave("plots/pat003_cume_time.png", 
-		   g.cumeValueTimeline(dist.year, break.even, genTimeline(100)),
-		   height=6.75, width=6, dpi=100)
+	ggsave("~/gitInternal/ta_presentations/images/empCosts/probTerm.png",
+		   g.probTerm(dist.year, break.even,do.annotate=TRUE), 
+		   height=6.75,width=6,dpi=100)
 
-	ggsave("plots/pat003_time_line.png", 
-		   g.timeline(genTimeline(200)),
-		   height=6.75, width=6, dpi=100)
+	ggsave("~/gitInternal/ta_presentations/images/empCosts/costBenefit.png",
+		   g.costBenefit(dist.year, break.even,do.annotate=TRUE), 
+		   height=6.75,width=6,dpi=100)
 
-	big.random <- genTimeline(500)
+	ggsave("~/gitInternal/ta_presentations/images/empCosts/cumeCostBenefit.png",
+		   g.cumeCostBenefit(dist.year, break.even,do.annotate=TRUE), 
+		   height=6.75,width=6,dpi=100)
 
-	ggsave("plots/pat003_histogram.png", 
-		   g.histogram(big.random, break.even),
-		   height=6.75, width=6, dpi=100)
+	ggsave("~/gitInternal/ta_presentations/images/empCosts/cumeValue.png",
+		   g.cumeValue(dist.year, break.even,do.annotate=TRUE), 
+		   height=6.75,width=6,dpi=100)
+
+	ggsave("~/gitInternal/ta_presentations/images/empCosts/cumeValueTimeline.png",
+		   g.cumeValueTimeline(dist.year, break.even, time.small),
+		   height=6.75,width=6,dpi=100)
+
+	ggsave("~/gitInternal/ta_presentations/images/empCosts/expCume.png",
+		   g.expCume(dist.year, break.even, evh, do.annotate=TRUE), 
+		   height=6.75,width=6,dpi=100)
+
+	ggsave("~/gitInternal/ta_presentations/images/empCosts/costArea.png",
+		   g.costArea(dist.year, break.even,
+					  main.title="Est Costs & Benefits for One Employee"),
+		   height=6.75,width=6,dpi=100)
+		   # height=4.5,width=12,dpi=100)
+
+	ggsave("~/gitInternal/ta_presentations/images/empCosts/costArea_good.png",
+		   g.costArea(dist.year, break.even,
+					  multiplier=1-cumsum(dist.year$prob.good)/100,
+					  main.title="Est Costs & Benefits for 'Good Fit' Employee"),
+		   height=6.75,width=6,dpi=100)
+		   # height=4.5,width=12,dpi=100)
+
+	ggsave("~/gitInternal/ta_presentations/images/empCosts/costArea_bad.png",
+		   g.costArea(dist.year, break.even,
+					  multiplier=1-cumsum(dist.year$prob.bad)/100,
+					  main.title="Est Costs & Benefits for 'Bad Fit' Employee"),
+		   height=6.75,width=6,dpi=100)
+		   # height=4.5,width=12,dpi=100)
+
+	ggsave("~/gitInternal/ta_presentations/images/empCosts/costArea_current.png",
+		   g.costArea(dist.year, break.even,
+					  multiplier=1-cumsum(dist.year$prob.good.wt + dist.year$prob.bad.wt)/100,
+					  main.title="Est Costs & Benefits for Current Mix of Employees"),
+		   height=6.75,width=6,dpi=100)
+
+	ggsave("~/gitInternal/ta_presentations/images/empCosts/costArea_currten.png",
+		   g.costArea(dist.year, break.even,
+					  multiplier=1-cumsum(dist.year$prob.good.wt2 + dist.year$prob.bad.wt2)/100,
+					  main.title="With 10% Improvement in Mix of Employees"),
+		   height=6.75,width=6,dpi=100)
+
+	ggsave("~/gitInternal/ta_presentations/images/empCosts/costAreaTimeline.png",
+		   g.costAreaTimeline(dist.year, break.even, time.small,
+					  main.title="Multiple Tenures in Employee Cost System"),
+		   height=6.75,width=6,dpi=100)
+
+	ggsave("~/gitInternal/ta_presentations/images/empCosts/survival.png",
+		   g.survival(time.big, break.even),
+		   height=6.75,width=6,dpi=100)
+
+	ggsave("~/gitInternal/ta_presentations/images/empCosts/survival_multi.png",
+		   g.survival(time.big, break.even, surv.split=TRUE),
+		   height=6.75,width=6,dpi=100)
+
+	ggsave("~/gitInternal/ta_presentations/images/empCosts/survivalCurve.png",
+		   g.survivalCurve(dist.year, break.even, surv.split=FALSE),
+		   height=6.75,width=6,dpi=100)
+
+	ggsave("~/gitInternal/ta_presentations/images/empCosts/survivalCurve_multi.png",
+		   g.survivalCurve(dist.year, break.even, surv.split=TRUE, do.annotate=TRUE),
+		   height=6.75,width=6,dpi=100)
+
+	ggsave("~/gitInternal/ta_presentations/images/empCosts/timeline.png",
+		   g.timeline(time.med),
+		   height=6.75,width=6,dpi=100)
+
+
+	# ggsave("plots/pat003_surv_split.png", 
+	# 	   g.survival(time.big, break.even, 
+	# 				  title="Multiple Survival Curves",
+	# 				  surv.split=TRUE),
+	# ggsave("plots/pat003_prob_term.png", 
+	# 	   g.probTerm(dist.year, break.even, do.annotate=TRUE), 
+	# 	   height=6.75, width=6, dpi=100)
+	# ggsave("plots/pat003_cost_benefit.png", 
+	# 	   g.costBenefit(dist.year, break.even, do.annotate=TRUE),
+	# 	   height=6.75, width=6, dpi=100)
+	# ggsave("plots/pat003_cume_value.png", 
+	# 	   g.cumeValue(dist.year, break.even, do.annotate=TRUE),
+	# 	   height=6.75, width=6, dpi=100)
+	# ggsave("plots/pat003_exp_cume.png", 
+	# 	   g.expCume(dist.year, break.even, evh, do.annotate=TRUE),
+	# 	   height=6.75, width=6, dpi=100)
+
+	# ggsave("plots/pat003_cume_time.png", 
+	# 	   g.cumeValueTimeline(dist.year, break.even, genTimeline(100)),
+	# 	   height=6.75, width=6, dpi=100)
+
+	# ggsave("plots/pat003_time_line.png", 
+	# 	   g.timeline(genTimeline(200)),
+	# 	   height=6.75, width=6, dpi=100)
+
+
+	# ggsave("plots/pat003_histogram.png", 
+	# 	   g.histogram(time.big, break.even),
+	# 	   height=6.75, width=6, dpi=100)
 	
-	ggsave("plots/pat003_survival.png", 
-		   g.survival(big.random, break.even),
-		   height=6.75, width=6, dpi=100)
+	# ggsave("plots/pat003_survival.png", 
+	# 	   g.survival(time.big, break.even),
+	# 	   height=6.75, width=6, dpi=100)
 
-	ggsave("plots/pat003_surv_split.png", 
-		   g.survival(big.random, break.even, 
-					  title="Multiple Survival Curves",
-					  surv.split=TRUE),
-		   height=6.75, width=6, dpi=100)
+	# ggsave("plots/pat003_surv_split.png", 
+	# 	   g.survival(time.big, break.even, 
+	# 				  title="Multiple Survival Curves",
+	# 				  surv.split=TRUE),
+	# 	   height=6.75, width=6, dpi=100)
 }
+
 
 # TODO B: cumsum = doesn't affect paw
 
