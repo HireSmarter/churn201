@@ -168,6 +168,16 @@ calcDist <- function(max.yrs=def$max.yrs, max.benefit=def$max.benefit,
 	# prob of bad terminating today, within whole sample
 	dist.year$prob.bad.wt2 <- dist.year$prob.bad * (1-good.bad.ratio-0.1)
 
+	### CHANGE MIX BY 10%
+	# prob of good.fit terminating today, within whole sample
+	dist.year$prob.good.wt2 <- dist.year$prob.good * (good.bad.ratio + 0.1)
+	# prob of bad terminating today, within whole sample
+	dist.year$prob.bad.wt2 <- dist.year$prob.bad * (1-good.bad.ratio-0.1)
+
+	### CDF for survival
+	dist.year$cdf.good <- cumsum(dist.year$prob.good/100)
+	dist.year$cdf.bad <- cumsum(dist.year$prob.bad/100)
+
 	return(dist.year)
 }
 
@@ -498,7 +508,7 @@ g.costArea <- function(dist.year, break.even, max.yrs=def$max.yrs,
 	zd.melt <- melt(zd, id.vars="tenure")
 
 	# use to scale the chart by probability
-	zd.melt$value <- zd.melt$value * pmax(0,multiplier)	 #1-cumsum(prob.bad)/100
+	zd.melt$value <- zd.melt$value * pmax(0,multiplier)	
 
 	zg <- 	ggplot(data=zd.melt, aes(x=tenure)) + 
 			geom_vline(xintercept=break.even$pt, col=def$col.be, size=0.5, linetype="dashed") +
@@ -550,41 +560,121 @@ g.costAreaTimeline <- function(dist.year, break.even, time.line, max.yrs=def$max
 	return(zg)
 }
 
-g.survivalCurve <- function(dist.year, break.even, max.yrs=def$max.yrs, surv.split=TRUE, do.annotate=FALSE) {
+g.survivalCurve <- function(dist.year, break.even, max.yrs=def$max.yrs, do.annotate=FALSE) {
+
+	z.rate <- 1 - dist.year$cdf.good[101] * def$good.bad.ratio - dist.year$cdf.bad[101] * (1 - def$good.bad.ratio)
+
+	writeLines(sprintf("Overall attrition rate %.1f%%", (1-z.rate)*100))
 
 	zg <- ggplot(data=dist.year, aes(x=tenure)) + 
 		   geom_vline(xintercept=break.even$cume, col=def$col.be.cume, size=0.5, linetype="dashed") +
 
+		   geom_hline(yintercept=z.rate, col=def$col.benefit, size=0.5, linetype="dotted") +
+		   geom_vline(xintercept=1, col=def$col.benefit, size=0.5, linetype="dotted") +
+
+		   geom_line(aes(y=1 - 
+						 	cdf.good * def$good.bad.ratio - 
+							cdf.bad  * (1 - def$good.bad.ratio)), col=def$col.benefit, size=1) +
+
 		   scale_y_continuous(labels = percent) +
 		   theme_bw() +
 		   xlim(c(0,max.yrs)) +
+		   ylim(c(0,1)) +
 		   labs(title="Survival Curve", 
 				x="Tenure in Years", 
 				y="Probability of Reaching Tenure")
 
-	if (surv.split) {
-		zg <- zg + 
-			geom_line(aes(y=1-cumsum(prob.bad)/100), col=def$col.bad, size=1) +
-			geom_line(aes(y=1-cumsum(prob.good)/100), col=def$col.good, size=1)
-	} else {
-		zg <- zg + 
-			geom_line(aes(y=1-cumsum(prob.bad+prob.good)/200), col=def$col.benefit, size=1)
-	}
-
-	if (do.annotate & surv.split) {
+	if (do.annotate) {
 		zg <- zg +
 				 annotate("text", 
-						  x=3.0, y=0.25, hjust=0, vjust=0,
-						  color=def$col.good,
-						  label="Good Fit") +
-				 annotate("text", 
-						  x=0.80, y=0.25, hjust=0, vjust=0,
-						  color=def$col.bad,
-						  label="Bad Fit")
+						  x=1, y=z.rate, hjust=-0.1, vjust=-0.1,
+						  color=def$col.benefit,
+						  label=sprintf("%.0f%% Attrition", (1-z.rate)*100))
 	}
 	return(zg)
 }
 
+g.survivalCurveGoodBad <- function(dist.year, break.even, max.yrs=def$max.yrs, do.annotate=FALSE) {
+
+	z.rate.good <- 1 - dist.year$cdf.good[101]
+	z.rate.bad <- 1 - dist.year$cdf.bad[101]
+	writeLines(sprintf("Attrition rates good %.1f%% bad %.1f%%", (1-z.rate.good)*100, (1-z.rate.bad)*100))
+
+	zg <- ggplot(data=dist.year, aes(x=tenure)) + 
+		   geom_vline(xintercept=break.even$cume, col=def$col.be.cume, size=0.5, linetype="dashed") +
+
+		   geom_hline(yintercept=z.rate.good, col=def$col.good, size=0.5, linetype="dotted") +
+		   geom_hline(yintercept=z.rate.bad, col=def$col.bad, size=0.5, linetype="dotted") +
+		   geom_vline(xintercept=1, col=def$col.good, size=0.5, linetype="dotted") +
+
+		   geom_line(aes(y=1 - cdf.good), col=def$col.good, size=1) +
+		   geom_line(aes(y=1 - cdf.bad), col=def$col.bad, size=1) +
+
+		   scale_y_continuous(labels = percent) +
+		   theme_bw() +
+		   xlim(c(0,max.yrs)) +
+		   ylim(c(0,1)) +
+		   labs(title="Survival Curve", 
+				x="Tenure in Years", 
+				y="Probability of Reaching Tenure")
+
+	if (do.annotate) {
+		zg <- zg +
+				 annotate("text", 
+						  x=1, y=z.rate.good, hjust=-0.1, vjust=-0.1,
+						  color=def$col.good,
+						  label=sprintf("Good Fit = %.0f%% Attrition", (1-z.rate.good)*100)) +
+				 annotate("text", 
+						  x=1, y=z.rate.bad, hjust=-0.1, vjust=-0.1,
+						  color=def$col.bad,
+						  label=sprintf("Bad Fit = %.0f%% Attrition", (1-z.rate.bad)*100))
+	}
+	return(zg)
+}
+
+g.survivalCurveDelta <- function(dist.year, break.even, pct1=def$good.bad.ratio, pct2=def$good.bad.ratio+0.1, max.yrs=def$max.yrs, do.annotate=FALSE) {
+
+	zd <- data.frame(tenure=dist.year$tenure)
+	zd$cdf.pct1 <- dist.year$cdf.good * pct1 + dist.year$cdf.bad * (1 - pct1)
+	zd$cdf.pct2 <- dist.year$cdf.good * pct2 + dist.year$cdf.bad * (1 - pct2)
+
+	# 1 year is 101st record
+	z.rate.pct1 <- 1 - zd$cdf.pct1[101]
+	z.rate.pct2 <- 1 - zd$cdf.pct2[101]
+
+	writeLines(sprintf("Attrition rates before %.1f%% after %.1f%%", (1-z.rate.pct1)*100, (1-z.rate.pct2)*100))
+
+	zg <- ggplot(data=zd, aes(x=tenure)) + 
+		   geom_vline(xintercept=break.even$cume, col=def$col.be.cume, size=0.5, linetype="dashed") +
+
+		   geom_hline(yintercept=z.rate.pct1, col=def$col.bad, size=0.5, linetype="dotted") +
+		   geom_hline(yintercept=z.rate.pct2, col=def$col.good, size=0.5, linetype="dotted") +
+		   geom_vline(xintercept=1, col=def$col.benefit, size=0.5, linetype="dotted") +
+
+		   geom_line(aes(y=1 - cdf.pct1), col=def$col.bad, size=1) +
+		   geom_line(aes(y=1 - cdf.pct2), col=def$col.good, size=1) +
+
+		   scale_y_continuous(labels = percent) +
+		   theme_bw() +
+		   xlim(c(0,max.yrs)) +
+		   ylim(c(0,1)) +
+		   labs(title="Survival Curve", 
+				x="Tenure in Years", 
+				y="Probability of Reaching Tenure")
+
+	if (do.annotate) {
+		zg <- zg +
+				 annotate("text", 
+						  x=1, y=z.rate.pct1, hjust=-0.4, vjust=-0.1,
+						  color=def$col.bad,
+						  label=sprintf("Before = %.0f%% Attrition", (1-z.rate.pct1)*100)) +
+				 annotate("text", 
+						  x=1, y=z.rate.pct2, hjust=-0.4, vjust=-0.1,
+						  color=def$col.good,
+						  label=sprintf("After = %.0f%% Attrition", (1-z.rate.pct2)*100))
+	}
+	return(zg)
+}
 g.timeline <- function(d.timeline) {
 
 	zg <- ggplot(d.timeline, aes(x=hire, 
@@ -651,6 +741,30 @@ g.survival <- function(data, break.even,
 				theme(legend.position = "none") +
 				xlim(c(0, max.yr))
 	return(zg)
+}
+
+g.deltaProfit <- function(dist.year, pct1=def$good.bad.ratio, pct2=def$good.bad.ratio+0.1, 
+						  base.salary=20000, num.reps=200) {
+	zp1 <- (sum(dist.year$profit * dist.year$prob.good * pct1) 
+		   + sum(dist.year$profit * dist.year$prob.bad * (1-pct1)))/100
+	zp2 <- (sum(dist.year$profit * dist.year$prob.good * pct2) 
+		   + sum(dist.year$profit * dist.year$prob.bad * (1-pct2)))/100
+
+	writeLines(sprintf("change pct good from %.0f%% to %.0f%% leads to:", 
+					   pct1*100, pct2*100))
+	writeLines(sprintf("  profit from %.2f%% to %.2f%%, change of %.2f%%", 
+					   zp1*100, zp2*100, (zp2/zp1-1)*100))
+
+	writeLines(sprintf("  for %i reps with %.0f salary:", 
+					   num.reps, base.salary))
+	writeLines(sprintf("    from %.0f /rep to %.0f /rep", 
+					   zp1*base.salary, zp2*base.salary))
+	writeLines(sprintf("    delta %.0f /rep or %.0f for %i reps", 
+					   (zp2-zp1)*base.salary, (zp2-zp1)*base.salary*num.reps, num.reps))
+
+	twoBars(sprintf("With %.0f%% Good Fit", pct1*100), zp1, 
+			sprintf("With %.0f%% Good Fit", pct2*100), zp2,
+			x.title="Employee Profit Under 'Good Fit' Mix Scenarios")
 }
 
 runFigures <- function() {
@@ -737,17 +851,25 @@ runFigures <- function() {
 		   height=6.75,width=6,dpi=100)
 
 	ggsave("~/gitInternal/ta_presentations/images/empCosts/survivalCurve.png",
-		   g.survivalCurve(dist.year, break.even, surv.split=FALSE),
+		   g.survivalCurve(dist.year, break.even, do.annotate=TRUE),
 		   height=6.75,width=6,dpi=100)
 
-	ggsave("~/gitInternal/ta_presentations/images/empCosts/survivalCurve_multi.png",
-		   g.survivalCurve(dist.year, break.even, surv.split=TRUE, do.annotate=TRUE),
+	ggsave("~/gitInternal/ta_presentations/images/empCosts/survivalCurveGoodBad.png",
+		   g.survivalCurveGoodBad(dist.year, break.even, do.annotate=TRUE),
 		   height=6.75,width=6,dpi=100)
+
+	ggsave("~/gitInternal/ta_presentations/images/empCosts/survivalCurveDelta.png",
+		   g.survivalCurveDelta(dist.year, break.even, do.annotate=TRUE),
+		   height=6.75,width=6,dpi=100)
+
 
 	ggsave("~/gitInternal/ta_presentations/images/empCosts/timeline.png",
 		   g.timeline(time.med),
 		   height=6.75,width=6,dpi=100)
 
+	ggsave("~/gitInternal/ta_presentations/images/empCosts/deltaProfit.png",
+		   g.deltaProfit(dist.year, def$good.bad.ratio, def$good.bad.ratio+0.1, 80000, 300),
+		   height=6.75,width=6,dpi=100)
 
 	# ggsave("plots/pat003_surv_split.png", 
 	# 	   g.survival(time.big, break.even, 
@@ -900,7 +1022,7 @@ sensitivityPlot <- function(label, def.value, input, output) {
 	return(zg)
 }
 
-twoBars <- function(var.a, val.a, var.b, val.b) {
+twoBars <- function(var.a, val.a, var.b, val.b, x.title="Analysis Results") {
 	# just a simple program to make quick bar charts as needed
 	d.g <- data.frame(rbind(c(var.a, val.a), c(var.b, val.b)))
 	names(d.g) <- c("variable", "value")
@@ -910,7 +1032,7 @@ twoBars <- function(var.a, val.a, var.b, val.b) {
 	ggplot(d.g, aes(x=variable, y=value, fill=variable, col=variable)) +
 	geom_bar(stat="identity") +
 	scale_y_continuous(labels = percent) +
-	labs(x="Analysis Results", y="Percent") +
+	labs(x=x.title,y="Percent") +
 	theme_bw() +
 	theme(legend.position="none") 
 }
