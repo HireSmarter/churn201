@@ -2,6 +2,7 @@ library(ggplot2)
 library(gridExtra)
 library(scales)
 library(manipulate)
+library(reshape)
 library(survival)
 library(GGally)
 
@@ -317,18 +318,20 @@ g.probTerm <- function(dist.year, break.even, max.yrs=def$max.yrs, do.annotate=F
 	return(zg)
 }
 
-g.costBenefit <- function(dist.year, break.even, max.yrs=def$max.yrs, do.annotate=FALSE) {
+g.costBenefit <- function(dist.year, break.even, max.yrs=def$max.yrs, 
+						  do.annotate=FALSE, line.size=1, text.size=10 ) {
 	zg <- ggplot(data=dist.year, aes(x=tenure)) + 
-			geom_vline(xintercept=break.even$pt, col=def$col.be, size=0.5, linetype="dashed") +
-			geom_vline(xintercept=break.even$cume, col=def$col.be.cume, size=0.5, linetype="dashed") +
+			geom_vline(xintercept=break.even$pt, col=def$col.be, size=line.size/2, linetype="dashed") +
+			geom_vline(xintercept=break.even$cume, col=def$col.be.cume, size=line.size/2, linetype="dashed") +
 			geom_ribbon(fill=def$col.cost, size=0, aes(ymax=cost,ymin=benefit,alpha=cost>benefit)) + 
 			scale_alpha_discrete(range=c(0,.25)) + 
 			theme(legend.position="none") +
-			geom_line(col=def$col.cost, size=1, aes(y=cost)) + 
-			geom_line(col=def$col.benefit, size=1, aes(y=benefit)) +
+			geom_line(col=def$col.cost, size=line.size, aes(y=cost)) + 
+			geom_line(col=def$col.benefit, size=line.size, aes(y=benefit)) +
 			scale_y_continuous(labels = percent) +
 			theme_bw() +
-			theme(legend.position="none") +
+			theme(legend.position="none", 
+				  text = element_text(size = text.size*2) ) +
 			labs(title="Benefit & Cost of One Employee", 
 				 x="Tenure in Years", 
 				 y="% Potential Value")
@@ -338,18 +341,22 @@ g.costBenefit <- function(dist.year, break.even, max.yrs=def$max.yrs, do.annotat
 			 annotate("text", 
 					  x=2.5, y=1.02, hjust=0, vjust=-0.2,
 					  color=def$col.benefit,
+					  size=text.size,
 					  label="Benefit") +
 			 annotate("text", 
 					  x=2.5, y=0.52, hjust=0, vjust=-0.2,
 					  color=def$col.cost,
+					  size=text.size,
 					  label="Cost") +
 			 annotate("text", 
 					  x=break.even$pt, y=0.1, hjust=-0.1, vjust=0,
 					  color=def$col.be,
+					  size=text.size,
 					  label="B/E") +
 			 annotate("text", 
 					  x=break.even$cume, y=0.1, hjust=-0.1, vjust=0,
 					  color=def$col.be,
+					  size=text.size,
 					  label="B/E Cume") 
 	}
 	return(zg)
@@ -501,7 +508,7 @@ g.expCume <- function(dist.year, break.even, evh, max.yrs=def$max.yrs, do.annota
 
 g.costArea <- function(dist.year, break.even, max.yrs=def$max.yrs, 
 					   alpha=0.7, main.title="Disposition of Employee Costs & Benefits",
-					   multiplier=1) {
+					   multiplier=1, line.size=1, text.size=10 ) {
 
 	zd <- dist.year[,c("tenure", "salary", "non.salary", 
 					   "learning", "debt.payment", "profit")]
@@ -511,9 +518,9 @@ g.costArea <- function(dist.year, break.even, max.yrs=def$max.yrs,
 	zd.melt$value <- zd.melt$value * pmax(0,multiplier)	
 
 	zg <- 	ggplot(data=zd.melt, aes(x=tenure)) + 
-			geom_vline(xintercept=break.even$pt, col=def$col.be, size=0.5, linetype="dashed") +
-			geom_vline(xintercept=break.even$cume, col=def$col.be.cume, size=0.5, linetype="dashed") +
-			geom_hline(yintercept=1, col=def$col.be.cume, size=1, linetype="dashed") +
+			geom_vline(xintercept=break.even$pt, col=def$col.be, size=line.size/2, linetype="dashed") +
+			geom_vline(xintercept=break.even$cume, col=def$col.be.cume, size=line.size/2, linetype="dashed") +
+			geom_hline(yintercept=1, col=def$col.be.cume, size=line.size, linetype="dashed") +
 
 			geom_area(aes(fill=variable, y=value), stat="identity", alpha=alpha) +
 
@@ -532,7 +539,8 @@ g.costArea <- function(dist.year, break.even, max.yrs=def$max.yrs,
 									   def$col.cost, 
 									   def$col.benefit )) +
 			theme_bw() +
-			theme(legend.position="bottom") +
+			theme(legend.position="bottom",
+				  text = element_text(size = text.size*2) ) +
 			# theme(text = element_text(size=8), 
 			# 	  axis.title.y = element_text(size=8)) +
 			# ylim(c(0,max(dist.year$cost.cume))) +
@@ -698,6 +706,26 @@ g.timeline <- function(d.timeline) {
 			   theme(legend.position="bottom",
 					 axis.ticks.y=element_blank(),
 					 axis.text.y=element_blank())
+	return(zg)
+}
+
+g.timeline0 <- function(d.timeline, line.height=0.02, line.size=0.6, text.size=10) {
+
+	zg <- ggplot(d.timeline, aes(x=hire, 
+								 xmin=0, 
+								 xmax=tenure.yrs, 
+								 y=randex,
+								 col=tenure.yrs>2.09)) +
+				geom_errorbarh(height=line.height, size=line.size) + 
+				scale_x_continuous(limits=c(0,max(d.timeline$tenure.yrs))) +
+				geom_vline(xintercept=break.even$pt, col=def$col.be, size=0.5, linetype="dashed") +
+				geom_vline(xintercept=break.even$cume, col=def$col.be.cume, size=0.5, linetype="dashed") +
+				labs(x="Tenure in Years", y="Employees") +
+				theme_bw() + 
+				theme(legend.position="none",
+					  text = element_text(size = text.size*2),
+					  axis.ticks.y=element_blank(),
+					  axis.text.y=element_blank())
 	return(zg)
 }
 
