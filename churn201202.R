@@ -407,7 +407,7 @@ runFigures <- function() {
 		   height=6, width=8, dpi=100)
 
 	ggsave("~/gitInternal/ta_presentations/images/churnMerge/cumeValue.png",
-		   g.copyright(g.cumeValue(cost.df, break.even), x=3, y=-21),
+		   g.copyright(g.cumeValue(cost.df, break.even), x=3, y=-26),
 		   height=6, width=8, dpi=100)
 
 	ggsave("~/gitInternal/ta_presentations/images/churnMerge/survivalCurveGoodBad.png",
@@ -418,7 +418,6 @@ runFigures <- function() {
 		   g.copyright(g.histogram(), x=3, y=-0.5),
 		   height=6, width=8, dpi=100)
 }
-
 
 # everything below here runs on source
 def <- setDefaults()
