@@ -619,7 +619,7 @@ g.survivalCurveGoodBad <- function(dist.year, break.even, max.yrs=def$max.yrs, d
 		   geom_line(aes(y=1 - cdf.bad), col=def$col.bad, size=1) +
 
 		   scale_y_continuous(labels = percent) +
-		   theme_bw() +
+		   # theme_bw() +
 		   xlim(c(0,max.yrs)) +
 		   ylim(c(0,1)) +
 		   labs(title="Survival Curve", 
@@ -683,6 +683,7 @@ g.survivalCurveDelta <- function(dist.year, break.even, pct1=def$good.bad.ratio,
 	}
 	return(zg)
 }
+
 g.timeline <- function(d.timeline) {
 
 	zg <- ggplot(d.timeline, aes(x=hire, 
