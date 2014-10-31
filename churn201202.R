@@ -34,7 +34,7 @@ setDefaults <- function() {
 	def$benefit.slope <- 0.05		# apr-style annual interest
 
 	def$cost.ramp <- 1.5
-	def$cost.scale <- 200			# no relation to final depth
+	def$cost.scale <- 400			# no relation to final depth
 	def$salary.amt <- 25000
 	def$salary.raise <- 0.05		# annual raise at 1-year marks
 	
