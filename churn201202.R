@@ -332,7 +332,7 @@ g.survivalCurveGoodBad <- function(cost.df=calcDist(), break.even=calcBreakeven(
 
 	if (do.annotate) {
 		zg <- zg +
-			   geom_segment(x = 1, y = 1, xend = 1, yend = z.rate.bad, 
+			   geom_segment(x = 1, y = 0, xend = 1, yend = z.rate.good, 
 							linetype="dotted",
 							col=def$col.bad,
 							size=line.size) +
@@ -350,15 +350,15 @@ g.survivalCurveGoodBad <- function(cost.df=calcDist(), break.even=calcBreakeven(
 							size=line.size) +
 
 				 annotate("text", 
-						  x=1.5, y=z.rate.good, hjust=0, vjust=0,
+						  x=1.5, y=z.rate.good-0.05, hjust=0, vjust=0,
 						  color=def$col.good,
 						  size=text.size,
-						  label=sprintf("High Engagement\n%.0f%% Attrition", (1-z.rate.good)*100)) +
+						  label=sprintf("High Engagement\n%.0f%% Survival\n%.0f%% Attrition", z.rate.good*100, (1-z.rate.good)*100)) +
 				 annotate("text", 
-						  x=1.2, y=z.rate.bad, hjust=-0, vjust=0,
+						  x=1.2, y=z.rate.bad-0.06, hjust=-0, vjust=0,
 						  color=def$col.bad,
 						  size=text.size,
-						  label=sprintf("Low Engagement\n%.0f%% Attrition", (1-z.rate.bad)*100))
+						  label=sprintf("Low Engagement\n%.0f%% Survival\n%.0f%% Attrition", z.rate.bad*100, (1-z.rate.bad)*100)) 
 	}
 	return(zg)
 }
@@ -399,24 +399,24 @@ runFigures <- function() {
 	break.even <- calcBreakeven(cost.df)
 
 	ggsave("~/gitInternal/ta_presentations/images/churnMerge/probTerm.png",
-		   g.copyright(g.probTerm(cost.df, break.even), x=2.5, y=-0.0001),
-		   height=6.75, width=6, dpi=100)
+		   g.copyright(g.probTerm(cost.df, break.even), x=3, y=-0.0001),
+		   height=6, width=8, dpi=100)
 
 	ggsave("~/gitInternal/ta_presentations/images/churnMerge/costBenefit.png",
-		   g.copyright(g.costBenefit(cost.df, break.even), x=2.5, y=-5),
-		   height=6.75, width=6, dpi=100)
+		   g.copyright(g.costBenefit(cost.df, break.even), x=3, y=-5),
+		   height=6, width=8, dpi=100)
 
 	ggsave("~/gitInternal/ta_presentations/images/churnMerge/cumeValue.png",
-		   g.copyright(g.cumeValue(cost.df, break.even), x=2.5, y=-21),
-		   height=6.75, width=6, dpi=100)
+		   g.copyright(g.cumeValue(cost.df, break.even), x=3, y=-21),
+		   height=6, width=8, dpi=100)
 
 	ggsave("~/gitInternal/ta_presentations/images/churnMerge/survivalCurveGoodBad.png",
-		   g.copyright(g.survivalCurveGoodBad(cost.df, break.even), x=2.5, y=-0.02),
-		   height=6.75, width=6, dpi=100)
+		   g.copyright(g.survivalCurveGoodBad(cost.df, break.even), x=3, y=-0.02),
+		   height=6, width=8, dpi=100)
 
 	ggsave("~/gitInternal/ta_presentations/images/churnMerge/histogram.png",
-		   g.copyright(g.histogram(), x=2.5, y=-0.5),
-		   height=6.75, width=6, dpi=100)
+		   g.copyright(g.histogram(), x=3, y=-0.5),
+		   height=6, width=8, dpi=100)
 }
 
 
