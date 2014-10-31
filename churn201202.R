@@ -11,19 +11,6 @@ library(GGally)
 # removed a lot of extra stuff from 202.
 # might need to re-add some integration
 
-# plots with % not prob   
-# bigger text  
-# no title  
-# trademark graph   
-# arrows   
-# grey grid  
-# Say Engagement in plots x x   
-
-# to run these by hand:
-#   zdist <- calcDist()
-#	zbreak <- calcBreakeven(zdist)
-
-
 setDefaults <- function() {
 	gpal <- scales::hue_pal(h = c(0, 360) + 15, c = 100, l = 65, h.start = 0, direction=1)(8)
 
@@ -38,12 +25,16 @@ setDefaults <- function() {
 	def$salary.amt <- 25000
 	def$salary.raise <- 0.05		# annual raise at 1-year marks
 	
-	def$shape.good <- 2.5
-	def$scale.good <- 2.5
-	def$shape.bad <- 1.66
-	def$scale.bad <- 0.63
+	def$shape.good <- 1.5
+	def$scale.good <- 3.5			# chicago is good, blue
+
+	def$shape.bad <- 1.5
+	def$scale.bad <- 1.5			# new york is bad, brown
+
 	def$good.bad.ratio <- 0.6
-	def$max.yrs <- 4
+	def$max.yrs <- 10
+	def$max.plot <- 5 
+
 	def$col.benefit <- gpal[3]	# dark green
 	def$col.cost <- gpal[1]		# salmon
 	def$col.good <- gpal[5]		# blue-grey
@@ -108,16 +99,16 @@ calcBreakeven <- function(cost.df=calcDist()) {
 }
 
 calcLTV <- function(cost.df=calcDist()) {
-	full.ltv <- cost.df$value.cume[nrow(cost.df)]
-	good.ltv <- sum(cost.df$value.cume * cost.df$prob.good)
-	bad.ltv <- sum(cost.df$value.cume * cost.df$prob.bad)
+	ltv <- list()
+	ltv[["Potential"]] <- cost.df$value.cume[nrow(cost.df)]
+	ltv[["Chicago"]] <- sum(cost.df$value.cume * cost.df$prob.good)
+	ltv[["New York"]] <- sum(cost.df$value.cume * cost.df$prob.bad)
 
-	writeLines(sprintf("Full LTV at 4 years $%s, good LTV $%s, bad ltf $%s", 
-					   format(round(full.ltv), big.mark=",", scientific=F),
-					   format(round(good.ltv), big.mark=",", scientific=F),
-					   format(round(bad.ltv), big.mark=",", scientific=F)))
-
-	return(c(full.ltv, good.ltv, bad.ltv))
+	writeLines(sprintf("Full LTV $%s, Chicago LTV $%s, New York ltf $%s", 
+					   format(round(ltv[[1]]), big.mark=",", scientific=F),
+					   format(round(ltv[[2]]), big.mark=",", scientific=F),
+					   format(round(ltv[[3]]), big.mark=",", scientific=F)))
+	return(ltv)
 }
 
 genTimeline <- function(emp=500) {
@@ -167,7 +158,7 @@ empCost <- function(tenure) {
 	# vector-friendly cost of employee, modeled as a gompertz function
 	zcost <- exp(-exp(def$cost.ramp * tenure)) * def$cost.scale
 	# salary
-	zsal <- (1+def$salary.raise)^(as.integer(zdist$tenure)) * def$salary.amt/200
+	zsal <- (1+def$salary.raise)^(as.integer(tenure)) * def$salary.amt/200
 
 	return(zcost + zsal)
 }
@@ -185,14 +176,14 @@ g.copyright <- function(g.input, text.size=2, x=4, y=-0.00015) {
 }
 
 g.probTerm <- function(cost.df=calcDist(), break.even=calcBreakeven(cost.df), 
-					   max.yrs=def$max.yrs, do.annotate=TRUE, line.size=1, text.size=10 ) {
+					   max.plot=def$max.plot, do.annotate=TRUE, line.size=1, text.size=10 ) {
 	zg <- ggplot(data=cost.df, aes(x=tenure)) + 
 			# geom_vline(xintercept=break.even$pt, col=def$col.be, size=line.size/2, linetype="dashed") +
 			# geom_vline(xintercept=break.even$cume, col=def$col.be.cume, size=line.size/2, linetype="dashed") +
 			geom_line(aes(y=prob.bad), col=def$col.bad, size=line.size) +
 			geom_line(aes(y=prob.good), col=def$col.good, size=line.size) +
 			scale_y_continuous(labels = percent) +
-			xlim(c(0, max.yrs)) +
+			xlim(c(0, max.plot)) +
 			theme(legend.position="none", 
 				  text = element_text(size = text.size*2) ) +
 			labs(x="Tenure in Years", 
@@ -201,44 +192,52 @@ g.probTerm <- function(cost.df=calcDist(), break.even=calcBreakeven(cost.df),
 	if (do.annotate) {
 		zg <- zg + 
 				annotate("text", 
-						x=2.01, y=0.0033, hjust=0, vjust=1,
+						x=3.01, y=0.001, hjust=0, vjust=0,
 						size=text.size,
 						color=def$col.good,
-						label="High\nEngagement") +
+						label="Chicago") +
 				annotate("text", 
-						 x=0.7, y=0.0062, hjust=0, vjust=1,
+						 x=1.5, y=0.002, hjust=0, vjust=0,
 						 size=text.size,
 						 color=def$col.bad,
-						 label="Low\nEngagement")
+						 label="New York")
 	}
 	return(zg)
 }
 
 g.costBenefit <- function(cost.df=calcDist(), break.even=calcBreakeven(cost.df), 
-						  max.yrs=def$max.yrs, do.annotate=TRUE, line.size=1, text.size=10 ) {
+						  max.plot=def$max.plot, do.annotate=TRUE, line.size=1, text.size=10 ) {
 	zg <- ggplot(data=cost.df, aes(x=tenure)) + 
 			geom_vline(xintercept=break.even$pt, col=def$col.be, size=line.size/2, linetype="dashed") +
 			geom_vline(xintercept=break.even$cume, col=def$col.be.cume, size=line.size/2, linetype="dashed") +
+
 			geom_ribbon(fill=def$col.cost, size=0, aes(ymax=cost,ymin=benefit,alpha=cost>benefit)) + 
 			scale_alpha_discrete(range=c(0,.25)) + 
-			theme(legend.position="none") +
+			
 			geom_line(col=def$col.cost, size=line.size, aes(y=cost)) + 
 			geom_line(col=def$col.benefit, size=line.size, aes(y=benefit)) +
+
 			scale_y_continuous(labels = dollar) +
+
+			xlim(c(0, max.plot)) +
+			# ylim(c(-5, round(cost.df$benefit[ which.min(cost.df$tenure < max.plot) ]/100)*100)) +
+			ylim(c(-5, max(cost.df$benefit[0:which.min(cost.df$tenure < max.plot)]))) +
+			
 			theme(legend.position="none", 
 				  text = element_text(size = text.size*2) ) +
 			labs(x="Tenure in Years", 
 				 y="Daily Cost or Benefit")
 
+
 	if (do.annotate) {
 		zg <- zg +
 			 annotate("text", 
-					  x=2.5, y=240, hjust=0, vjust=0,
+					  x=3, y=240, hjust=0, vjust=0,
 					  color=def$col.benefit,
 					  size=text.size,
 					  label="Benefit") +
 			 annotate("text", 
-					  x=2.5, y=110, hjust=0, vjust=0,
+					  x=3, y=110, hjust=0, vjust=0,
 					  color=def$col.cost,
 					  size=text.size,
 					  label="Cost") +
@@ -257,22 +256,27 @@ g.costBenefit <- function(cost.df=calcDist(), break.even=calcBreakeven(cost.df),
 }
 
 g.cumeValue <- function(cost.df=calcDist(), break.even=calcBreakeven(cost.df),
-						max.yrs=def$max.yrs, do.annotate=TRUE, line.size=1, text.size=10) {
+						max.plot=def$max.plot, do.annotate=TRUE, line.size=1, text.size=10) {
 
 	zg <- ggplot(data=cost.df, aes(x=tenure)) + 
 			geom_vline(xintercept=break.even$pt, col=def$col.be, size=line.size/2, linetype="dashed") +
 			geom_vline(xintercept=break.even$cume, col=def$col.be.cume, size=line.size/2, linetype="dashed") +
 			geom_hline(yintercept=0, col=def$col.be.cume, size=line.size/2, linetype="dotted") +
+
 			geom_ribbon(size=0, alpha=0.5, ymin=0,
 						aes(ymax=(benefit.cume-cost.cume)/1000, 
 							fill=(benefit.cume-cost.cume)>0)) + 
 			geom_line(size=line.size, 
 					  aes(y=(benefit.cume-cost.cume)/1000,
 						  col=(benefit.cume-cost.cume)>0)) +
-			scale_y_continuous(labels = dollar) +
+			
 			scale_fill_manual(values=c(def$col.cost, def$col.benefit)) +
 			scale_color_manual(values=c(def$col.cost, def$col.benefit)) +
-			xlim(c(0,max.yrs)) +
+			scale_y_continuous(labels = dollar) +
+
+			xlim(c(0, max.plot)) +
+			ylim(range(cost.df$value.cume[0:which.min(cost.df$tenure < max.plot)])/1000) +
+
 			theme(legend.position="none", 
 				  text = element_text(size = text.size*2) ) +
 			labs(x="Tenure in Years", 
@@ -291,12 +295,12 @@ g.cumeValue <- function(cost.df=calcDist(), break.even=calcBreakeven(cost.df),
 						  size=text.size,
 						  label="Net Cost") +
 				 annotate("text", 
-						  x=break.even$pt, y=50, hjust=-0.1, vjust=0,
+						  x=break.even$pt, y=75, hjust=-0.1, vjust=0,
 						  color=def$col.be,
 						  size=text.size/2,
 						  label="B/E") +
 				 annotate("text", 
-						  x=break.even$cume, y=50, hjust=-0.1, vjust=0,
+						  x=break.even$cume, y=75, hjust=-0.1, vjust=0,
 						  color=def$col.be,
 						  size=text.size/2,
 						  label="B/E Cume")
@@ -305,7 +309,7 @@ g.cumeValue <- function(cost.df=calcDist(), break.even=calcBreakeven(cost.df),
 }
 
 g.survivalCurveGoodBad <- function(cost.df=calcDist(), break.even=calcBreakeven(cost.df), 
-								   max.yrs=def$max.yrs, do.annotate=TRUE, line.size=1, text.size=6) {
+								   max.plot=def$max.plot, do.annotate=TRUE, line.size=1, text.size=6) {
 
 	## get atttr at 1 year = 201
 	z.rate.good <- 1 - cost.df$cdf.good[201]
@@ -320,7 +324,7 @@ g.survivalCurveGoodBad <- function(cost.df=calcDist(), break.even=calcBreakeven(
 		   geom_line(aes(y=1 - cdf.bad), col=def$col.bad, size=line.size) +
 
 
-		   xlim(c(0,max.yrs)) +
+		   xlim(c(0,max.plot)) +
 		   ylim(c(0,1)) +
 
 		   scale_y_continuous(labels = percent) +
@@ -332,64 +336,95 @@ g.survivalCurveGoodBad <- function(cost.df=calcDist(), break.even=calcBreakeven(
 
 	if (do.annotate) {
 		zg <- zg +
-			   geom_segment(x = 1, y = 0, xend = 1, yend = z.rate.good, 
-							linetype="dotted",
-							col=def$col.bad,
-							size=line.size) +
-			   geom_segment(x = 0, y = z.rate.bad, xend = 1.2, yend = z.rate.bad, 
-							linetype="dotted",
-							col=def$col.bad,
-							size=line.size) +
 			   geom_segment(x = 1, y = 1, xend = 1, yend = z.rate.good, 
 							linetype="dotted",
 							col=def$col.good,
 							size=line.size) +
-			   geom_segment(x = 0, y = z.rate.good, xend = 1.5, yend = z.rate.good, 
+			   geom_segment(x = 0, y = z.rate.good, xend = 3, yend = z.rate.good, 
 							linetype="dotted",
 							col=def$col.good,
 							size=line.size) +
-
 				 annotate("text", 
-						  x=1.5, y=z.rate.good-0.05, hjust=0, vjust=0,
+						  x=1.1, y=z.rate.good, hjust=0, vjust=-0.5,
 						  color=def$col.good,
 						  size=text.size,
-						  label=sprintf("High Engagement\n%.0f%% Survival\n%.0f%% Attrition", z.rate.good*100, (1-z.rate.good)*100)) +
+						  label="Chicago") +
 				 annotate("text", 
-						  x=1.2, y=z.rate.bad-0.06, hjust=-0, vjust=0,
+						  x=3, y=z.rate.good, hjust=0, vjust=0,
+						  color=def$col.good,
+						  size=text.size,
+						  label=sprintf("%.0f%% Survival\n%.0f%% Attrition", z.rate.good*100, (1-z.rate.good)*100)) +
+
+			   geom_segment(x = 1, y = 0, xend = 1, yend = z.rate.good, 
+							linetype="dotted",
+							col=def$col.bad,
+							size=line.size) +
+			   geom_segment(x = 0, y = z.rate.bad, xend = 3, yend = z.rate.bad, 
+							linetype="dotted",
+							col=def$col.bad,
+							size=line.size) +
+				 annotate("text", 
+						  x=1.1, y=z.rate.bad, hjust=0, vjust=-0.5,
 						  color=def$col.bad,
 						  size=text.size,
-						  label=sprintf("Low Engagement\n%.0f%% Survival\n%.0f%% Attrition", z.rate.bad*100, (1-z.rate.bad)*100)) 
+						  label="New York") +
+				 annotate("text", 
+						  x=3, y=z.rate.bad, hjust=0, vjust=0,
+						  color=def$col.bad,
+						  size=text.size,
+						  label=sprintf("%.0f%% Survival\n%.0f%% Attrition", z.rate.bad*100, (1-z.rate.bad)*100)) 
 	}
 	return(zg)
 }
 
 g.histogram <- function(d.timeline=genTimeline(), break.even=calcBreakeven(), 
-						max.yrs=def$max.yrs, text.size=10) {
+						max.plot=def$max.plot, text.size=10) {
 
-	zg <- ggplot(data=d.timeline, aes(x=tenure.yrs)) + 
-			   geom_histogram(binwidth=1/12, fill=def$col.benefit) + 
+	ggplot(data=d.timeline, aes(x=tenure.yrs)) + 
+		   geom_histogram(binwidth=1/12, fill=def$col.benefit) + 
 
-			   geom_vline(xintercept=break.even$pt, col=def$col.be, size=0.5, linetype="dashed") +
-			   geom_vline(xintercept=break.even$cume, col=def$col.be.cume, size=0.5, linetype="dashed") +
+		   geom_vline(xintercept=break.even$pt, col=def$col.be, size=0.5, linetype="dashed") +
+		   geom_vline(xintercept=break.even$cume, col=def$col.be.cume, size=0.5, linetype="dashed") +
 
-			   annotate("text", 
-						x=break.even$pt, y=25, hjust=-0.1, vjust=0,
-						color=def$col.be,
-						size=text.size/2,
-						label="B/E") +
-			  annotate("text", 
-					   x=break.even$cume, y=25, hjust=-0.1, vjust=0,
-					   color=def$col.be,
-					   size=text.size/2,
-					   label="B/E Cume") +
+		   annotate("text", 
+					x=break.even$pt, y=25, hjust=-0.1, vjust=0,
+					color=def$col.be,
+					size=text.size/2,
+					label="B/E") +
+		  annotate("text", 
+				   x=break.even$cume, y=25, hjust=-0.1, vjust=0,
+				   color=def$col.be,
+				   size=text.size/2,
+				   label="B/E Cume") +
 
-			   xlim(c(0, max.yrs)) +
+		   xlim(c(0, max.plot)) +
 
-			   theme(text = element_text(size=text.size*2)) +
-					 
-			   labs(x="Tenure in Years", 
-					y="Count")
-	return(zg)
+		   theme(text = element_text(size=text.size*2)) +
+				 
+		   labs(x="Tenure in Years", 
+				y="Count")
+}
+
+g.lifetimeValue <- function(ltv=calcLTV(), text.size=10) {
+
+	# have to do factor() to keep order
+	dg <- data.frame(variable=factor(names(ltv), levels=names(ltv)), value=unlist(ltv))
+
+	ggplot(dg, aes(x=variable, y=value, fill=variable, col=variable)) +
+
+		geom_bar(stat="identity") +
+		geom_hline(yintercept=0,col=def$col.be) +
+		geom_text(aes(label=paste("$",format(round(value), big.mark=",", scientific=F)), vjust = ifelse(value >= 0, 0, 1)), col="black") +
+
+
+		scale_fill_manual(values=c(def$col.benefit, def$col.good, def$col.bad)) +
+		scale_color_manual(values=c(def$col.benefit, def$col.good, def$col.bad)) +
+
+		scale_y_continuous(labels = dollar) +
+		labs(x="", y="Employee Lifetime Value") +
+
+		theme(legend.position="none", 
+			  text = element_text(size = text.size*2) )
 }
 
 runFigures <- function() {
@@ -399,23 +434,28 @@ runFigures <- function() {
 	break.even <- calcBreakeven(cost.df)
 
 	ggsave("~/gitInternal/ta_presentations/images/churnMerge/probTerm.png",
-		   g.copyright(g.probTerm(cost.df, break.even), x=3, y=-0.0001),
+		   g.copyright(g.probTerm(cost.df, break.even), x=4, y=-0.0001),
 		   height=6, width=8, dpi=100)
 
 	ggsave("~/gitInternal/ta_presentations/images/churnMerge/costBenefit.png",
-		   g.copyright(g.costBenefit(cost.df, break.even), x=3, y=-5),
+		   g.copyright(g.costBenefit(cost.df, break.even), x=4, y=-5),
+		   # g.costBenefit(cost.df, break.even),
 		   height=6, width=8, dpi=100)
 
 	ggsave("~/gitInternal/ta_presentations/images/churnMerge/cumeValue.png",
-		   g.copyright(g.cumeValue(cost.df, break.even), x=3, y=-26),
+		   g.copyright(g.cumeValue(cost.df, break.even), x=4, y=-25),
 		   height=6, width=8, dpi=100)
 
 	ggsave("~/gitInternal/ta_presentations/images/churnMerge/survivalCurveGoodBad.png",
-		   g.copyright(g.survivalCurveGoodBad(cost.df, break.even), x=3, y=-0.02),
+		   g.copyright(g.survivalCurveGoodBad(cost.df, break.even), x=4, y=-0.02),
 		   height=6, width=8, dpi=100)
 
 	ggsave("~/gitInternal/ta_presentations/images/churnMerge/histogram.png",
-		   g.copyright(g.histogram(), x=3, y=-0.5),
+		   g.copyright(g.histogram(), x=4, y=-0.5),
+		   height=6, width=8, dpi=100)
+
+	ggsave("~/gitInternal/ta_presentations/images/churnMerge/lifetimeValue.png",
+		   g.copyright(g.lifetimeValue(),x=0.5,y=-10000),
 		   height=6, width=8, dpi=100)
 }
 
