@@ -100,11 +100,11 @@ calcBreakeven <- function(cost.df=calcDist()) {
 
 calcLTV <- function(cost.df=calcDist()) {
 	ltv <- list()
-	ltv[["Potential"]] <- cost.df$value.cume[nrow(cost.df)]
+	ltv[["At 5 Yr"]] <- cost.df$value.cume[200*5+1]
 	ltv[["Chicago"]] <- sum(cost.df$value.cume * cost.df$prob.good)
 	ltv[["New York"]] <- sum(cost.df$value.cume * cost.df$prob.bad)
 
-	writeLines(sprintf("Full LTV $%s, Chicago LTV $%s, New York ltf $%s", 
+	writeLines(sprintf("5 Yr LTV $%s, Chicago LTV $%s, New York ltf $%s", 
 					   format(round(ltv[[1]]), big.mark=",", scientific=F),
 					   format(round(ltv[[2]]), big.mark=",", scientific=F),
 					   format(round(ltv[[3]]), big.mark=",", scientific=F)))
@@ -340,7 +340,7 @@ g.survivalCurveGoodBad <- function(cost.df=calcDist(), break.even=calcBreakeven(
 							linetype="dotted",
 							col=def$col.good,
 							size=line.size) +
-			   geom_segment(x = 0, y = z.rate.good, xend = 3, yend = z.rate.good, 
+			   geom_segment(x = 0, y = z.rate.good, xend = 3.5, yend = z.rate.good, 
 							linetype="dotted",
 							col=def$col.good,
 							size=line.size) +
@@ -350,16 +350,16 @@ g.survivalCurveGoodBad <- function(cost.df=calcDist(), break.even=calcBreakeven(
 						  size=text.size,
 						  label="Chicago") +
 				 annotate("text", 
-						  x=3, y=z.rate.good, hjust=0, vjust=0,
+						  x=3, y=z.rate.good, hjust=0, vjust=0.5,
 						  color=def$col.good,
 						  size=text.size,
-						  label=sprintf("%.0f%% Survival\n%.0f%% Attrition", z.rate.good*100, (1-z.rate.good)*100)) +
+						  label=sprintf("%.0f%% Attrition\n%.0f%% Survival", (1-z.rate.good)*100, z.rate.good*100 )) +
 
 			   geom_segment(x = 1, y = 0, xend = 1, yend = z.rate.good, 
 							linetype="dotted",
 							col=def$col.bad,
 							size=line.size) +
-			   geom_segment(x = 0, y = z.rate.bad, xend = 3, yend = z.rate.bad, 
+			   geom_segment(x = 0, y = z.rate.bad, xend = 3.5, yend = z.rate.bad, 
 							linetype="dotted",
 							col=def$col.bad,
 							size=line.size) +
@@ -369,10 +369,10 @@ g.survivalCurveGoodBad <- function(cost.df=calcDist(), break.even=calcBreakeven(
 						  size=text.size,
 						  label="New York") +
 				 annotate("text", 
-						  x=3, y=z.rate.bad, hjust=0, vjust=0,
+						  x=3, y=z.rate.bad, hjust=0, vjust=0.5,
 						  color=def$col.bad,
 						  size=text.size,
-						  label=sprintf("%.0f%% Survival\n%.0f%% Attrition", z.rate.bad*100, (1-z.rate.bad)*100)) 
+						  label=sprintf("%.0f%% Attrition\n%.0f%% Survival", (1-z.rate.bad)*100, z.rate.bad*100 )) 
 	}
 	return(zg)
 }
