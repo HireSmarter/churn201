@@ -177,13 +177,14 @@ g.copyright <- function(g.input, text.size=2, x=4, y=-0.00015) {
 
 g.probTerm <- function(cost.df=calcDist(), break.even=calcBreakeven(cost.df), 
 					   max.plot=def$max.plot, do.annotate=TRUE, line.size=1, text.size=10 ) {
-	zg <- ggplot(data=cost.df, aes(x=tenure)) + 
+	zg <- ggplot(data=subset(cost.df, tenure<=max.plot), aes(x=tenure)) + 
 			# geom_vline(xintercept=break.even$pt, col=def$col.be, size=line.size/2, linetype="dashed") +
 			# geom_vline(xintercept=break.even$cume, col=def$col.be.cume, size=line.size/2, linetype="dashed") +
 			geom_line(aes(y=prob.bad), col=def$col.bad, size=line.size) +
 			geom_line(aes(y=prob.good), col=def$col.good, size=line.size) +
+
 			scale_y_continuous(labels = percent) +
-			xlim(c(0, max.plot)) +
+
 			theme(legend.position="none", 
 				  text = element_text(size = text.size*2) ) +
 			labs(x="Tenure in Years", 
@@ -207,7 +208,7 @@ g.probTerm <- function(cost.df=calcDist(), break.even=calcBreakeven(cost.df),
 
 g.costBenefit <- function(cost.df=calcDist(), break.even=calcBreakeven(cost.df), 
 						  max.plot=def$max.plot, do.annotate=TRUE, line.size=1, text.size=10 ) {
-	zg <- ggplot(data=cost.df, aes(x=tenure)) + 
+	zg <- ggplot(data=subset(cost.df, tenure<=max.plot), aes(x=tenure)) + 
 			geom_vline(xintercept=break.even$pt, col=def$col.be, size=line.size/2, linetype="dashed") +
 			geom_vline(xintercept=break.even$cume, col=def$col.be.cume, size=line.size/2, linetype="dashed") +
 
@@ -216,13 +217,9 @@ g.costBenefit <- function(cost.df=calcDist(), break.even=calcBreakeven(cost.df),
 			
 			geom_line(col=def$col.cost, size=line.size, aes(y=cost)) + 
 			geom_line(col=def$col.benefit, size=line.size, aes(y=benefit)) +
-
+			
 			scale_y_continuous(labels = dollar) +
 
-			xlim(c(0, max.plot)) +
-			# ylim(c(-5, round(cost.df$benefit[ which.min(cost.df$tenure < max.plot) ]/100)*100)) +
-			ylim(c(-5, max(cost.df$benefit[0:which.min(cost.df$tenure < max.plot)]))) +
-			
 			theme(legend.position="none", 
 				  text = element_text(size = text.size*2) ) +
 			labs(x="Tenure in Years", 
@@ -258,7 +255,8 @@ g.costBenefit <- function(cost.df=calcDist(), break.even=calcBreakeven(cost.df),
 g.cumeValue <- function(cost.df=calcDist(), break.even=calcBreakeven(cost.df),
 						max.plot=def$max.plot, do.annotate=TRUE, line.size=1, text.size=10) {
 
-	zg <- ggplot(data=cost.df, aes(x=tenure)) + 
+	zg <- ggplot(data=subset(cost.df, tenure<=max.plot), aes(x=tenure)) + 
+
 			geom_vline(xintercept=break.even$pt, col=def$col.be, size=line.size/2, linetype="dashed") +
 			geom_vline(xintercept=break.even$cume, col=def$col.be.cume, size=line.size/2, linetype="dashed") +
 			geom_hline(yintercept=0, col=def$col.be.cume, size=line.size/2, linetype="dotted") +
@@ -274,13 +272,10 @@ g.cumeValue <- function(cost.df=calcDist(), break.even=calcBreakeven(cost.df),
 			scale_color_manual(values=c(def$col.cost, def$col.benefit)) +
 			scale_y_continuous(labels = dollar) +
 
-			xlim(c(0, max.plot)) +
-			ylim(range(cost.df$value.cume[0:which.min(cost.df$tenure < max.plot)])/1000) +
-
 			theme(legend.position="none", 
 				  text = element_text(size = text.size*2) ) +
 			labs(x="Tenure in Years", 
-				 y="Cumulative Value in Thousands")
+				 y="Cumulative Value (in thousands)")
 
 	if (do.annotate) {
 		zg <- zg +
@@ -316,18 +311,15 @@ g.survivalCurveGoodBad <- function(cost.df=calcDist(), break.even=calcBreakeven(
 	z.rate.bad <- 1 - cost.df$cdf.bad[201]
 	writeLines(sprintf("Attrition rates good %.1f%% bad %.1f%%", (1-z.rate.good)*100, (1-z.rate.bad)*100))
 
-	zg <- ggplot(data=cost.df, aes(x=tenure)) + 
+	zg <- ggplot(data=subset(cost.df, tenure<=max.plot), aes(x=tenure)) + 
 
 		   # geom_vline(xintercept=break.even$cume, col=def$col.be.cume, size=line.size/2, linetype="dashed") +
 
 		   geom_line(aes(y=1 - cdf.good), col=def$col.good, size=line.size) +
 		   geom_line(aes(y=1 - cdf.bad), col=def$col.bad, size=line.size) +
 
-
-		   xlim(c(0,max.plot)) +
-		   ylim(c(0,1)) +
-
 		   scale_y_continuous(labels = percent) +
+
 		   theme(legend.position="none", 
 				 text = element_text(size = text.size*10/6*2) ) +
 
